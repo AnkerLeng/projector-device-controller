@@ -310,7 +310,14 @@ ipcMain.handle('device-power-control', async (event, deviceId, action) => {
       controller.disconnect();
     }
     
-    return result;
+    // 确保返回可序列化的数据
+    return {
+      success: result.success,
+      error: result.error,
+      response: typeof result.response === 'string' ? result.response : JSON.stringify(result.response),
+      status: result.status,
+      responseTime: result.responseTime
+    };
   } catch (error) {
     console.error('Device control error:', error);
     return { success: false, error: error.message };
@@ -355,7 +362,16 @@ ipcMain.handle('batch-device-control', async (event, deviceIds, action) => {
         controller.disconnect();
       }
       
-      return { deviceId, deviceName: device.name, success: result.success, result };
+      // 只返回可序列化的数据，避免克隆错误
+      return { 
+        deviceId, 
+        deviceName: device.name, 
+        success: result.success, 
+        error: result.error,
+        response: typeof result.response === 'string' ? result.response : JSON.stringify(result.response),
+        status: result.status,
+        responseTime: result.responseTime
+      };
     } catch (error) {
       const device = getDeviceById(deviceId);
       return { deviceId, deviceName: device?.name || 'Unknown', success: false, error: error.message };

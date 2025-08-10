@@ -16,7 +16,9 @@
       "mcp__context7__get-library-docs",
       "Bash(npm run electron:dev:*)",
       "Bash(npm run build:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(jq:*)",
+      "Bash(node:*)"
     ],
     "deny": []
   }

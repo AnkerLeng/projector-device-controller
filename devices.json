@@ -37,7 +37,8 @@
       "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
       "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
       "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
-    }
+    },
+    "updatedAt": "2025-08-10T05:29:22.935Z"
   },
   {
     "id": "1691234567894",
@@ -96,5 +97,185 @@
     "id": "1754802080197",
     "createdAt": "2025-08-10T05:01:20.197Z",
     "updatedAt": "2025-08-10T05:01:20.197Z"
+  },
+  {
+    "name": "地面投影82",
+    "ip": "10.20.1.82",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    },
+    "id": "1754802984641",
+    "createdAt": "2025-08-10T05:16:24.641Z",
+    "updatedAt": "2025-08-10T05:16:24.641Z"
+  },
+  {
+    "name": "地面投影84",
+    "ip": "10.20.1.84",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    },
+    "id": "1754803033224",
+    "createdAt": "2025-08-10T05:17:13.224Z",
+    "updatedAt": "2025-08-10T05:17:13.224Z"
+  },
+  {
+    "name": "地面投影85",
+    "ip": "10.20.1.85",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    },
+    "id": "1754803056493",
+    "createdAt": "2025-08-10T05:17:36.493Z",
+    "updatedAt": "2025-08-10T05:17:36.493Z"
+  },
+  {
+    "name": "地面投影86",
+    "ip": "10.20.1.86",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    },
+    "id": "1754803065685",
+    "createdAt": "2025-08-10T05:17:45.685Z",
+    "updatedAt": "2025-08-10T05:17:45.685Z"
+  },
+  {
+    "name": "地面投影87",
+    "ip": "10.20.1.87",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    },
+    "id": "1754803071697",
+    "createdAt": "2025-08-10T05:17:51.697Z",
+    "updatedAt": "2025-08-10T05:17:51.697Z"
+  },
+  {
+    "name": "墙面投影92",
+    "ip": "10.20.1.92",
+    "port": 80,
+    "type": "http",
+    "room": "卡丁车房",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754803100679",
+    "createdAt": "2025-08-10T05:18:20.679Z",
+    "updatedAt": "2025-08-10T05:18:20.679Z"
+  },
+  {
+    "name": "墙面投影91",
+    "ip": "10.20.1.91",
+    "port": 80,
+    "type": "http",
+    "room": "卡丁车房",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754803108983",
+    "createdAt": "2025-08-10T05:18:28.983Z",
+    "updatedAt": "2025-08-10T05:18:28.983Z"
+  },
+  {
+    "name": "墙面投影90",
+    "ip": "10.20.1.90",
+    "port": 80,
+    "type": "http",
+    "room": "卡丁车房",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754803116180",
+    "createdAt": "2025-08-10T05:18:36.180Z",
+    "updatedAt": "2025-08-10T05:18:36.180Z"
+  },
+  {
+    "name": "墙面投影97",
+    "ip": "10.20.1.97",
+    "port": 80,
+    "type": "http",
+    "room": "光子攀岩",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754803146263",
+    "createdAt": "2025-08-10T05:19:06.263Z",
+    "updatedAt": "2025-08-10T05:19:14.216Z"
+  },
+  {
+    "name": "蹦床投影98",
+    "ip": "10.20.1.98",
+    "port": 80,
+    "type": "http",
+    "room": "光影蹦床",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "17548038743706838",
+    "createdAt": "2025-08-10T05:31:13.519Z",
+    "updatedAt": "2025-08-10T05:31:13.519Z"
+  },
+  {
+    "name": "VR投影101",
+    "ip": "10.20.1.101",
+    "port": 80,
+    "type": "http",
+    "room": "VR体验区",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "17548038742428066",
+    "createdAt": "2025-08-10T05:31:13.519Z",
+    "updatedAt": "2025-08-10T05:31:13.519Z"
+  },
+  {
+    "name": "VR投影102",
+    "ip": "10.20.1.102",
+    "port": 80,
+    "type": "http",
+    "room": "VR体验区",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "17548038738242212",
+    "createdAt": "2025-08-10T05:31:13.519Z",
+    "updatedAt": "2025-08-10T05:31:13.519Z"
   }
 ]

@@ -1,0 +1,73 @@
+{
+  "exportedAt": "2025-08-10T05:23:08.095Z",
+  "version": "1.0",
+  "devices": [
+    {
+      "id": "1691234567890",
+      "name": "地面投影仪81",
+      "ip": "10.20.1.81",
+      "port": 9763,
+      "type": "tcp",
+      "room": "卡丁车房",
+      "tcpCommands": {
+        "powerOn": "POWER1",
+        "powerOff": "POWER0",
+        "status": "POWER?"
+      }
+    },
+    {
+      "id": "1691234567891",
+      "name": "地面投影仪93",
+      "ip": "10.20.1.93",
+      "port": 80,
+      "type": "http",
+      "room": "卡丁车房",
+      "httpUrls": {
+        "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+        "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+        "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+      }
+    },
+    {
+      "id": "1691234567893",
+      "name": "蹦床投影",
+      "ip": "10.20.1.96",
+      "port": 80,
+      "type": "http",
+      "room": "光影蹦床",
+      "httpUrls": {
+        "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+        "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+        "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+      }
+    },
+    {
+      "id": "1691234567894",
+      "name": "地面投影仪83",
+      "ip": "10.20.1.83",
+      "port": 9763,
+      "type": "tcp",
+      "room": "卡丁车房",
+      "tcpCommands": {
+        "powerOn": "POWER1",
+        "powerOff": "POWER0",
+        "status": "POWER?"
+      }
+    }
+  ],
+  "deviceGroups": [],
+  "customRooms": [],
+  "stats": {
+    "totalDevices": 4,
+    "devicesByType": {
+      "tcp": 2,
+      "http": 2
+    },
+    "devicesByRoom": {
+      "卡丁车房": 3,
+      "光影蹦床": 1
+    },
+    "totalGroups": 0,
+    "totalRooms": 0
+  }
+}
