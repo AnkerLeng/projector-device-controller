@@ -1,0 +1,100 @@
+[
+  {
+    "id": "1691234567890",
+    "name": "地面投影仪81",
+    "ip": "10.20.1.81",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    }
+  },
+  {
+    "id": "1691234567891",
+    "name": "地面投影88",
+    "ip": "10.20.1.88",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "updatedAt": "2025-08-10T05:07:08.154Z",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    }
+  },
+  {
+    "id": "1691234567893",
+    "name": "蹦床投影",
+    "ip": "10.20.1.96",
+    "port": 80,
+    "type": "http",
+    "room": "光影蹦床",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    }
+  },
+  {
+    "id": "1691234567894",
+    "name": "地面投影仪83",
+    "ip": "10.20.1.83",
+    "port": 9763,
+    "type": "tcp",
+    "room": "卡丁车房",
+    "tcpCommands": {
+      "powerOn": "POWER1",
+      "powerOff": "POWER0",
+      "status": "POWER?"
+    }
+  },
+  {
+    "name": "派对投影94",
+    "ip": "10.20.1.94",
+    "port": 80,
+    "type": "http",
+    "room": "光子派对",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754801984141",
+    "createdAt": "2025-08-10T04:59:44.141Z",
+    "updatedAt": "2025-08-10T04:59:44.141Z"
+  },
+  {
+    "name": "派对投影95",
+    "ip": "10.20.1.95",
+    "port": 80,
+    "type": "http",
+    "room": "光子派对",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754801997474",
+    "createdAt": "2025-08-10T04:59:57.474Z",
+    "updatedAt": "2025-08-10T04:59:57.474Z"
+  },
+  {
+    "name": "墙面投影93",
+    "ip": "10.20.1.93",
+    "port": 80,
+    "type": "http",
+    "room": "卡丁车房",
+    "httpUrls": {
+      "powerOn": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196614,v:0",
+      "powerOff": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196615,v:0",
+      "status": "/cgi-bin/webctrl.cgi.elf?&t:26,c:5,p:196616,v:0"
+    },
+    "id": "1754802080197",
+    "createdAt": "2025-08-10T05:01:20.197Z",
+    "updatedAt": "2025-08-10T05:01:20.197Z"
+  }
+]

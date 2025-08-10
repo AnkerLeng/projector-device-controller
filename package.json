@@ -1,0 +1,66 @@
+{
+  "name": "projector-manager",
+  "version": "1.0.0",
+  "description": "投影设备管理器 - 支持TCP和HTTP协议的投影仪控制系统",
+  "main": "src-electron/main.js",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview",
+    "electron": "node electron.js",
+    "electron:dev": "concurrently \"vite --host 127.0.0.1\" \"wait-on http://127.0.0.1:5173 && cross-env NODE_ENV=development electron src-electron/main.js\"",
+    "electron:simple": "electron src-electron/main.js",
+    "electron:build": "vite build && electron-builder",
+    "electron:pack": "electron-builder --dir",
+    "lint": "eslint src --ext .js,.vue",
+    "test": "vitest"
+  },
+  "dependencies": {
+    "@ant-design/icons-vue": "^7.0.1",
+    "ant-design-vue": "^4.2.6",
+    "axios": "^1.11.0",
+    "vue": "^3.5.18"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-vue": "^6.0.1",
+    "concurrently": "^8.2.0",
+    "cross-env": "^7.0.3",
+    "electron": "^25.0.0",
+    "electron-builder": "^24.6.3",
+    "eslint": "^8.45.0",
+    "eslint-plugin-vue": "^9.15.1",
+    "vite": "^7.1.1",
+    "vitest": "^3.2.4",
+    "wait-on": "^7.0.1"
+  },
+  "build": {
+    "appId": "com.projector.manager",
+    "productName": "Projector Manager",
+    "directories": {
+      "output": "dist-electron"
+    },
+    "files": [
+      "dist/**/*",
+      "src-electron/**/*"
+    ],
+    "mac": {
+      "category": "public.app-category.utilities"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "linux": {
+      "target": "AppImage"
+    }
+  },
+  "keywords": [
+    "projector",
+    "device-management",
+    "tcp",
+    "http",
+    "electron",
+    "vue"
+  ],
+  "author": "Projector Manager Team",
+  "license": "MIT"
+}

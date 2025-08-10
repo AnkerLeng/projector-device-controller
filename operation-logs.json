@@ -1,0 +1,122 @@
+[
+  {
+    "timestamp": "2025-08-10T04:43:39.546Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:44:25.249Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:44:35.502Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:51:25.752Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:51:38.538Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:51:50.107Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:52:31.416Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 4
+  },
+  {
+    "timestamp": "2025-08-10T04:59:44.144Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 5
+  },
+  {
+    "timestamp": "2025-08-10T04:59:57.477Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 6
+  },
+  {
+    "timestamp": "2025-08-10T05:01:20.200Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:01:38.337Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:02:57.814Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:03:50.187Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:04:00.123Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:04:57.179Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:06:41.124Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:06:47.492Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:06:54.219Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:07:01.210Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  },
+  {
+    "timestamp": "2025-08-10T05:07:08.159Z",
+    "operation": "save",
+    "dataType": "devices",
+    "recordCount": 7
+  }
+]
