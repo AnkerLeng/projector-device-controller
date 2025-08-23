@@ -404,6 +404,9 @@
         <QuestionCircleOutlined />
       </template>
     </a-float-button>
+
+    <!-- Update Notification Component -->
+    <UpdateNotification />
   </a-layout>
   </a-app>
 </template>
@@ -434,6 +437,7 @@ import {
 import DeviceCard from './components/DeviceCard.vue';
 import AddDeviceModal from './components/AddDeviceModal.vue';
 import DeviceGroup from './components/DeviceGroup.vue';
+import UpdateNotification from './components/UpdateNotification.vue';
 
 // Reactive data
 const devices = ref([]);

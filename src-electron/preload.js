@@ -30,5 +30,10 @@ contextBridge.exposeInMainWorld('electronAPI', {
   getStats: () => ipcRenderer.invoke('get-stats'),
   exportData: () => ipcRenderer.invoke('export-data'),
   importData: (data) => ipcRenderer.invoke('import-data', data),
-  createBackup: () => ipcRenderer.invoke('create-backup')
+  createBackup: () => ipcRenderer.invoke('create-backup'),
+
+  // Auto-updater
+  getAppVersion: () => ipcRenderer.invoke('get-app-version'),
+  checkForUpdates: () => ipcRenderer.invoke('check-for-updates'),
+  getUpdateStatus: () => ipcRenderer.invoke('get-update-status')
 });

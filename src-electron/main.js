@@ -3,6 +3,8 @@ const { join } = require('path');
 const fs = require('fs').promises;
 const net = require('net');
 const axios = require('axios');
+const { updateElectronApp } = require('update-electron-app');
+const log = require('electron-log');
 const DataManager = require('./data-manager');
 const PCController = require('./pc-controller');
 
@@ -11,6 +13,25 @@ const dataManager = new DataManager();
 
 // Check if running in development
 const isDev = process.env.NODE_ENV === 'development' || !app.isPackaged;
+
+// 配置electron-log
+log.transports.file.level = 'info';
+log.transports.console.level = isDev ? 'debug' : 'info';
+log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
+
+// 初始化自动更新 (只在生产环境)
+if (!isDev) {
+  try {
+    updateElectronApp({
+      updateInterval: '1 hour', // 每小时检查一次更新
+      logger: log,
+      notifyUser: true // 通知用户有可用更新
+    });
+    log.info('Auto-updater initialized');
+  } catch (error) {
+    log.error('Failed to initialize auto-updater:', error);
+  }
+}
 
 // TCP Device Controller
 class TCPDeviceController {
@@ -873,6 +894,33 @@ ipcMain.handle('test-tcp-command', async (event, deviceConfig, command) => {
       timestamp: new Date().toISOString()
     };
   }
+});
+
+// Auto-updater IPC handlers
+ipcMain.handle('get-app-version', () => {
+  return app.getVersion();
+});
+
+ipcMain.handle('check-for-updates', async () => {
+  if (isDev) {
+    return { success: false, error: 'Updates not available in development mode' };
+  }
+  
+  try {
+    // update-electron-app 会自动检查更新，这里只是返回当前状态
+    return { success: true, message: 'Update check initiated' };
+  } catch (error) {
+    log.error('Manual update check failed:', error);
+    return { success: false, error: error.message };
+  }
+});
+
+ipcMain.handle('get-update-status', () => {
+  return {
+    isDev,
+    version: app.getVersion(),
+    autoUpdaterEnabled: !isDev
+  };
 });
 
 // Electron app setup

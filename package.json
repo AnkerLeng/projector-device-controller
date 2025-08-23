@@ -12,6 +12,7 @@
     "electron:simple": "electron src-electron/main.js",
     "electron:build": "vite build && electron-builder",
     "electron:pack": "electron-builder --dir",
+    "release": "vite build && electron-builder --publish=onTagOrDraft",
     "lint": "eslint src --ext .js,.vue",
     "test": "vitest"
   },
@@ -19,6 +20,8 @@
     "@ant-design/icons-vue": "^7.0.1",
     "ant-design-vue": "^4.2.6",
     "axios": "^1.11.0",
+    "electron-log": "^5.4.3",
+    "update-electron-app": "^3.1.1",
     "vue": "^3.5.18"
   },
   "devDependencies": {
@@ -62,7 +65,16 @@
       "allowToChangeInstallationDirectory": true,
       "installerIcon": "app.ico",
       "uninstallerIcon": "app.ico"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "your-github-username",
+      "repo": "projector-manager"
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-github-username/projector-manager.git"
   },
   "keywords": [
     "projector",
