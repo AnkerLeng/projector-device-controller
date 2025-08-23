@@ -953,8 +953,8 @@ function createWindow() {
 
   // Load app
   if (isDev) {
-    console.log('Loading development server at http://127.0.0.1:5173');
-    mainWindow.loadURL('http://127.0.0.1:5173');
+    console.log('Loading development server at http://127.0.0.1:5174');
+    mainWindow.loadURL('http://127.0.0.1:5174');
     // Wait for the page to load before opening DevTools
     mainWindow.webContents.once('did-finish-load', () => {
       mainWindow.webContents.openDevTools();
