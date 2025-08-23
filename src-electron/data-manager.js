@@ -1,11 +1,14 @@
 const { promises: fs } = require('fs');
 const { join } = require('path');
 const path = require('path');
+const { app } = require('electron');
 
 class DataManager {
   constructor() {
     this.locks = new Map();
-    this.dataDir = __dirname + '/..';
+    
+    // 使用userData目录统一存储数据，确保开发和生产环境一致
+    this.dataDir = app.getPath('userData');
     
     this.files = {
       devices: join(this.dataDir, 'devices.json'),
@@ -20,6 +23,19 @@ class DataManager {
       customRooms: [],
       operationLogs: []
     };
+    
+    // 确保数据目录存在
+    this.ensureDataDir();
+  }
+
+  // 确保数据目录存在
+  async ensureDataDir() {
+    try {
+      await fs.mkdir(this.dataDir, { recursive: true });
+      console.log('数据目录已确保存在:', this.dataDir);
+    } catch (error) {
+      console.error('创建数据目录失败:', error);
+    }
   }
 
   // 获取文件锁
@@ -41,6 +57,9 @@ class DataManager {
     const backupPath = filePath + '.backup';
     
     try {
+      // 确保目录存在
+      await this.ensureDataDir();
+      
       // 如果原文件存在，创建备份
       try {
         await fs.access(filePath);
@@ -174,12 +193,12 @@ class DataManager {
   }
 
   // 增强的设备操作
-  async saveDevice(device) {
+  async saveDevice(device, forceAsNew = false) {
     this.validateDeviceData(device);
     
     const devices = this.get('devices');
     
-    if (device.id) {
+    if (device.id && !forceAsNew) {
       // 更新现有设备
       const index = devices.findIndex(d => d.id === device.id);
       if (index !== -1) {
@@ -223,12 +242,17 @@ class DataManager {
         devices[index] = updatedDevice;
         device = updatedDevice; // 返回完整的设备对象
       } else {
-        throw new Error('Device not found for update');
+        // 设备ID不存在，作为新设备处理（用于导入场景）
+        device.createdAt = device.createdAt || new Date().toISOString();
+        device.updatedAt = new Date().toISOString();
+        devices.push(device);
       }
     } else {
       // 添加新设备
-      device.id = Date.now().toString();
-      device.createdAt = new Date().toISOString();
+      if (!device.id || forceAsNew) {
+        device.id = Date.now().toString();
+      }
+      device.createdAt = device.createdAt || new Date().toISOString();
       device.updatedAt = new Date().toISOString();
       devices.push(device);
     }
@@ -307,16 +331,31 @@ class DataManager {
     
     // 执行导入
     const results = {
-      devices: { imported: 0, skipped: 0, errors: [] },
+      devices: { imported: 0, updated: 0, skipped: 0, errors: [] },
       deviceGroups: { imported: 0, skipped: 0, errors: [] },
       customRooms: { imported: 0, skipped: 0, errors: [] }
     };
     
+    const existingDevices = this.get('devices');
+    
     // 导入设备
     for (const device of importData.devices) {
       try {
-        await this.saveDevice(device);
-        results.devices.imported++;
+        // 检查是否存在相同IP的设备（避免重复）
+        const existingByIp = existingDevices.find(d => d.ip === device.ip);
+        
+        if (existingByIp) {
+          // 更新现有设备
+          const updatedDevice = { ...device, id: existingByIp.id };
+          await this.saveDevice(updatedDevice);
+          results.devices.updated++;
+        } else {
+          // 导入为新设备，移除原ID避免冲突
+          const newDevice = { ...device };
+          delete newDevice.id;
+          await this.saveDevice(newDevice);
+          results.devices.imported++;
+        }
       } catch (error) {
         results.devices.errors.push({ device: device.name || device.id, error: error.message });
         results.devices.skipped++;
@@ -324,13 +363,13 @@ class DataManager {
     }
     
     // 导入设备组
-    if (importData.deviceGroups) {
+    if (importData.deviceGroups && Array.isArray(importData.deviceGroups)) {
       await this.save('deviceGroups', importData.deviceGroups);
       results.deviceGroups.imported = importData.deviceGroups.length;
     }
     
     // 导入自定义房间
-    if (importData.customRooms) {
+    if (importData.customRooms && Array.isArray(importData.customRooms)) {
       await this.save('customRooms', importData.customRooms);
       results.customRooms.imported = importData.customRooms.length;
     }

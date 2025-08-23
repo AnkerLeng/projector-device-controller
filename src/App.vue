@@ -103,7 +103,7 @@
                       <a-menu @click="handleRoomMenuClick($event, room)">
                         <a-menu-item key="edit">
                           <EditOutlined />
-                          编辑房间
+                          编辑房
                         </a-menu-item>
                         <a-menu-item key="delete" :disabled="room.deviceCount > 0">
                           <DeleteOutlined />
@@ -595,19 +595,25 @@ const handleRoomSelect = ({ key }) => {
 };
 
 const toggleDeviceSelection = (deviceId, selected) => {
+  const cleanDeviceId = String(deviceId);
   if (selected) {
-    if (!selectedDevices.value.includes(deviceId)) {
-      selectedDevices.value.push(deviceId);
+    if (!selectedDevices.value.includes(cleanDeviceId)) {
+      selectedDevices.value.push(cleanDeviceId);
     }
   } else {
-    selectedDevices.value = selectedDevices.value.filter(id => id !== deviceId);
+    selectedDevices.value = selectedDevices.value.filter(id => String(id) !== cleanDeviceId);
   }
 };
 
 const selectAllCurrentRoom = () => {
-  const currentRoomDeviceIds = filteredDevices.value.map(device => device.id);
-  selectedDevices.value = [...new Set([...selectedDevices.value, ...currentRoomDeviceIds])];
+  const currentRoomDeviceIds = filteredDevices.value.map(device => String(device.id));
+  // 创建干净的设备ID数组，避免Vue响应式代理
+  const cleanSelectedDevices = [...selectedDevices.value].map(id => String(id));
+  selectedDevices.value = [...new Set([...cleanSelectedDevices, ...currentRoomDeviceIds])];
+  
   message.success(`已选择当前房间的 ${currentRoomDeviceIds.length} 台设备`);
+  console.log('全选后的设备ID列表:', selectedDevices.value);
+  
   addLog('info', `全选房间设备`, { 
     room: selectedRoom.value[0], 
     deviceCount: currentRoomDeviceIds.length 
@@ -736,29 +742,63 @@ const batchPowerControl = async (action) => {
     }
     
     batchLoading.value = true;
-    const result = await window.electronAPI.batchDeviceControl(selectedDevices.value, action);
+    
+    // 确保传递的是纯净的数组，移除Vue响应式代理
+    const cleanDeviceIds = [...selectedDevices.value].map(id => String(id));
+    console.log('批量操作设备ID列表:', cleanDeviceIds);
+    
+    const result = await window.electronAPI.batchDeviceControl(cleanDeviceIds, action);
     
     if (result.success) {
-      const { successful, failed, total } = result.summary;
+      const { successful, failed, total, totalAttempts, maxAttempts } = result.summary;
       
       if (failed === 0) {
-        message.success(`批量操作完成，成功控制 ${successful} 台设备`);
+        message.success(`批量操作完成，成功控制 ${successful} 台设备${totalAttempts > successful ? ` (总共重试 ${totalAttempts} 次)` : ''}`);
+        addLog('success', `批量${action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询'}完成`, {
+          successful,
+          failed,
+          total,
+          totalAttempts,
+          maxAttempts
+        });
       } else {
+        const actionText = action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询';
         notification.warning({
-          message: '批量操作完成',
-          description: `成功 ${successful} 台，失败 ${failed} 台，共 ${total} 台设备`
+          message: `批量${actionText}完成`,
+          description: `成功 ${successful} 台，失败 ${failed} 台，共 ${total} 台设备${totalAttempts > 0 ? `\n总重试次数: ${totalAttempts}，最大重试次数: ${maxAttempts}` : ''}`,
+          duration: 6
+        });
+        
+        // 记录失败的设备详情
+        const failedDevices = result.results.filter(r => !r.success);
+        addLog('warning', `批量${actionText}部分失败`, {
+          successful,
+          failed,
+          totalAttempts,
+          failedDevices: failedDevices.map(d => ({
+            name: d.deviceName,
+            error: d.error,
+            attempts: d.attempts
+          }))
         });
       }
       
       // Update device status
-      result.results.forEach(({ deviceId, success }) => {
+      result.results.forEach(({ deviceId, success, attempts }) => {
         const device = devices.value.find(d => d.id === deviceId);
-        if (device && success) {
-          device.status = action === 'powerOn' ? 'online' : 'offline';
+        if (device) {
+          if (success) {
+            device.status = action === 'powerOn' ? 'online' : action === 'powerOff' ? 'offline' : 'online';
+          }
+          // 为了调试，可以临时存储重试次数信息
+          if (attempts > 1) {
+            console.log(`设备 ${device.name} 经过 ${attempts} 次尝试${success ? '成功' : '失败'}`);
+          }
         }
       });
     } else {
       message.error('批量操作失败: ' + result.error);
+      addLog('error', '批量操作失败', { error: result.error });
     }
   } catch (error) {
     message.error('批量操作失败: ' + error.message);
@@ -869,7 +909,7 @@ const deleteDevice = async (deviceId) => {
     
     await window.electronAPI.deleteDevice(deviceId);
     devices.value = devices.value.filter(d => d.id !== deviceId);
-    selectedDevices.value = selectedDevices.value.filter(id => id !== deviceId);
+    selectedDevices.value = selectedDevices.value.filter(id => String(id) !== String(deviceId));
     
     // 保存房间到customRooms，确保房间不会因为设备删除而消失
     if (deviceRoom && deviceRoom !== '未分类' && deviceRoom.trim() !== '') {
@@ -1405,7 +1445,7 @@ const saveSelectedAsGroup = () => {
 const handleGroupAction = async (group, action) => {
   switch (action) {
     case 'select':
-      selectedDevices.value = [...group.deviceIds];
+      selectedDevices.value = [...group.deviceIds].map(id => String(id));
       message.success(`已选择设备组 "${group.name}" 中的 ${group.deviceIds.length} 个设备`);
       addLog('info', `已选择设备组: ${group.name}`, { 
         deviceCount: group.deviceIds.length 
@@ -1420,7 +1460,7 @@ const handleGroupAction = async (group, action) => {
     case 'powerOn':
     case 'powerOff':
     case 'status':
-      selectedDevices.value = [...group.deviceIds];
+      selectedDevices.value = [...group.deviceIds].map(id => String(id));
       await batchPowerControl(action);
       break;
   }

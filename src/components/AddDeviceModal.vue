@@ -35,10 +35,11 @@
 
       <a-row :gutter="16">
         <a-col :span="12">
-          <a-form-item label="协议类型" name="type" required>
+          <a-form-item label="设备类型" name="type" required>
             <a-select v-model:value="formData.type" @change="onTypeChange">
-              <a-select-option value="tcp">TCP</a-select-option>
-              <a-select-option value="http">HTTP</a-select-option>
+              <a-select-option value="tcp">TCP投影仪</a-select-option>
+              <a-select-option value="http">HTTP投影仪</a-select-option>
+              <a-select-option value="pc">PC电脑</a-select-option>
             </a-select>
           </a-form-item>
         </a-col>
@@ -172,6 +173,123 @@
         </a-form-item>
       </div>
 
+      <!-- PC Configuration -->
+      <div v-if="formData.type === 'pc'">
+        <a-divider orientation="left">PC 远程控制配置</a-divider>
+        
+        <!-- WOL Configuration for Power On -->
+        <a-card title="开机配置 (网络唤醒 WOL)" size="small" style="margin-bottom: 16px;">
+          <a-form-item label="MAC地址" name="pcConfig.macAddress" required>
+            <a-input 
+              v-model:value="formData.pcConfig.macAddress" 
+              placeholder="AA:BB:CC:DD:EE:FF"
+              :maxlength="17"
+            />
+            <div class="form-tip">
+              用于网络唤醒开机，格式: AA:BB:CC:DD:EE:FF 或 AA-BB-CC-DD-EE-FF
+            </div>
+          </a-form-item>
+
+          <a-row :gutter="16">
+            <a-col :span="12">
+              <a-form-item label="广播地址" name="pcConfig.broadcastAddress">
+                <a-input 
+                  v-model:value="formData.pcConfig.broadcastAddress" 
+                  placeholder="255.255.255.255"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="WOL端口" name="pcConfig.wolPort">
+                <a-input-number 
+                  v-model:value="formData.pcConfig.wolPort" 
+                  :min="1" 
+                  :max="65535"
+                  placeholder="9"
+                  style="width: 100%"
+                />
+              </a-form-item>
+            </a-col>
+          </a-row>
+        </a-card>
+
+        <!-- Shutdown Configuration -->
+        <a-card title="关机配置 (远程关机)" size="small" style="margin-bottom: 16px;">
+          <a-form-item label="操作系统" name="pcConfig.os" required>
+            <a-select v-model:value="formData.pcConfig.os">
+              <a-select-option value="windows">Windows</a-select-option>
+              <a-select-option value="linux">Linux</a-select-option>
+            </a-select>
+          </a-form-item>
+
+          <a-row :gutter="16">
+            <a-col :span="12">
+              <a-form-item label="用户名" name="pcConfig.username" required>
+                <a-input 
+                  v-model:value="formData.pcConfig.username" 
+                  placeholder="administrator / root"
+                />
+              </a-form-item>
+            </a-col>
+            <a-col :span="12">
+              <a-form-item label="密码" name="pcConfig.password" required>
+                <a-input-password 
+                  v-model:value="formData.pcConfig.password" 
+                  placeholder="登录密码"
+                />
+                <div class="form-tip">
+                  Linux系统也可以使用私钥文件路径 (如: ~/.ssh/id_rsa)
+                </div>
+              </a-form-item>
+            </a-col>
+          </a-row>
+
+          <a-form-item label="关机延时" name="pcConfig.shutdownTimeout">
+            <a-input-number 
+              v-model:value="formData.pcConfig.shutdownTimeout" 
+              :min="0" 
+              :max="3600"
+              addon-after="秒"
+              placeholder="30"
+              style="width: 100%"
+            />
+            <div class="form-tip">
+              关机前的等待时间，0表示立即关机
+            </div>
+          </a-form-item>
+        </a-card>
+
+        <!-- Status Check Configuration -->
+        <a-card title="状态检测配置" size="small">
+          <a-form-item label="检测端口" name="pcConfig.checkPort">
+            <a-input-number 
+              v-model:value="formData.pcConfig.checkPort" 
+              :min="1" 
+              :max="65535"
+              placeholder="3389 (RDP) / 22 (SSH)"
+              style="width: 100%"
+            />
+            <div class="form-tip">
+              可选: 用于检测PC服务状态的端口 (如RDP:3389, SSH:22)
+            </div>
+          </a-form-item>
+
+          <!-- PC Presets -->
+          <a-form-item label="快速配置">
+            <a-select 
+              placeholder="选择PC类型模板"
+              @change="applyPcPreset"
+              style="width: 100%"
+            >
+              <a-select-option value="windows-workstation">Windows工作站</a-select-option>
+              <a-select-option value="windows-server">Windows服务器</a-select-option>
+              <a-select-option value="linux-desktop">Linux桌面</a-select-option>
+              <a-select-option value="linux-server">Linux服务器</a-select-option>
+            </a-select>
+          </a-form-item>
+        </a-card>
+      </div>
+
       <!-- Test Connection -->
       <a-form-item>
         <a-button 
@@ -229,6 +347,16 @@ const formData = reactive({
   httpAuth: {
     username: '',
     password: ''
+  },
+  pcConfig: {
+    macAddress: '',
+    broadcastAddress: '255.255.255.255',
+    wolPort: 9,
+    os: 'windows',
+    username: '',
+    password: '',
+    shutdownTimeout: 30,
+    checkPort: null
   }
 });
 
@@ -241,7 +369,54 @@ const formRules = {
     { pattern: /^(\d{1,3}\.){3}\d{1,3}$/, message: '请输入有效的IP地址' }
   ],
   type: [
-    { required: true, message: '请选择协议类型' }
+    { required: true, message: '请选择设备类型' }
+  ],
+  'pcConfig.macAddress': [
+    { 
+      validator: (rule, value) => {
+        if (formData.type === 'pc' && !value) {
+          return Promise.reject('请输入MAC地址');
+        }
+        if (value && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(value)) {
+          return Promise.reject('MAC地址格式不正确');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'blur'
+    }
+  ],
+  'pcConfig.os': [
+    { 
+      validator: (rule, value) => {
+        if (formData.type === 'pc' && !value) {
+          return Promise.reject('请选择操作系统');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'change'
+    }
+  ],
+  'pcConfig.username': [
+    { 
+      validator: (rule, value) => {
+        if (formData.type === 'pc' && !value) {
+          return Promise.reject('请输入用户名');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'blur'
+    }
+  ],
+  'pcConfig.password': [
+    { 
+      validator: (rule, value) => {
+        if (formData.type === 'pc' && !value) {
+          return Promise.reject('请输入密码');
+        }
+        return Promise.resolve();
+      },
+      trigger: 'blur'
+    }
   ]
 };
 
@@ -276,6 +451,16 @@ const resetForm = () => {
     httpAuth: {
       username: '',
       password: ''
+    },
+    pcConfig: {
+      macAddress: '',
+      broadcastAddress: '255.255.255.255',
+      wolPort: 9,
+      os: 'windows',
+      username: '',
+      password: '',
+      shutdownTimeout: 30,
+      checkPort: null
     }
   });
   testResult.value = null;
@@ -293,7 +478,18 @@ watch(() => props.device, (newDevice) => {
       ...newDevice,
       tcpCommands: { ...newDevice.tcpCommands || {} },
       httpUrls: { ...newDevice.httpUrls || {} },
-      httpAuth: { ...newDevice.httpAuth || {} }
+      httpAuth: { ...newDevice.httpAuth || {} },
+      pcConfig: { 
+        macAddress: '',
+        broadcastAddress: '255.255.255.255',
+        wolPort: 9,
+        os: 'windows',
+        username: '',
+        password: '',
+        shutdownTimeout: 30,
+        checkPort: null,
+        ...newDevice.pcConfig || {}
+      }
     });
   } else {
     resetForm();
@@ -306,6 +502,8 @@ const onTypeChange = (type) => {
     formData.port = 9763;
   } else if (type === 'http' && !formData.port) {
     formData.port = 80;
+  } else if (type === 'pc') {
+    formData.port = null; // PC doesn't need port for basic control
   }
   testResult.value = null;
 };
@@ -369,6 +567,39 @@ const applyHttpPreset = (preset) => {
   }
 };
 
+const applyPcPreset = (preset) => {
+  const presets = {
+    'windows-workstation': {
+      os: 'windows',
+      username: 'administrator',
+      shutdownTimeout: 30,
+      checkPort: 3389 // RDP
+    },
+    'windows-server': {
+      os: 'windows',
+      username: 'administrator',
+      shutdownTimeout: 60,
+      checkPort: 3389 // RDP
+    },
+    'linux-desktop': {
+      os: 'linux',
+      username: 'user',
+      shutdownTimeout: 30,
+      checkPort: 22 // SSH
+    },
+    'linux-server': {
+      os: 'linux',
+      username: 'root',
+      shutdownTimeout: 60,
+      checkPort: 22 // SSH
+    }
+  };
+  
+  if (presets[preset]) {
+    Object.assign(formData.pcConfig, presets[preset]);
+  }
+};
+
 const testConnection = async () => {
   try {
     if (!window.electronAPI || !window.electronAPI.deviceControl) {
@@ -418,20 +649,36 @@ const handleSave = async () => {
     
     const deviceData = { ...formData };
     
-    // Set default port if not provided
-    if (!deviceData.port) {
+    // Set default port if not provided (PC devices don't need default ports)
+    if (!deviceData.port && deviceData.type !== 'pc') {
       deviceData.port = deviceData.type === 'tcp' ? 9763 : 80;
     }
     
-    // Clean up empty objects
+    // Clean up empty objects based on device type
     if (deviceData.type === 'tcp') {
       delete deviceData.httpUrls;
       delete deviceData.httpAuth;
+      delete deviceData.pcConfig;
     } else if (deviceData.type === 'http') {
       delete deviceData.tcpCommands;
+      delete deviceData.pcConfig;
       // Clean up empty auth
       if (!deviceData.httpAuth.username && !deviceData.httpAuth.password) {
         delete deviceData.httpAuth;
+      }
+    } else if (deviceData.type === 'pc') {
+      delete deviceData.tcpCommands;
+      delete deviceData.httpUrls;
+      delete deviceData.httpAuth;
+      // Clean up empty PC config fields
+      if (!deviceData.pcConfig.broadcastAddress) {
+        deviceData.pcConfig.broadcastAddress = '255.255.255.255';
+      }
+      if (!deviceData.pcConfig.wolPort) {
+        deviceData.pcConfig.wolPort = 9;
+      }
+      if (!deviceData.pcConfig.shutdownTimeout) {
+        deviceData.pcConfig.shutdownTimeout = 30;
       }
     }
     

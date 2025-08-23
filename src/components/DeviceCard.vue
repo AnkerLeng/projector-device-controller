@@ -7,14 +7,17 @@
   >
     <template #extra>
       <a-space size="small">
-        <a-tag :color="device.type === 'tcp' ? 'blue' : 'green'">
-          {{ device.type.toUpperCase() }}
+        <a-tag :color="getTypeColor(device.type)">
+          {{ getTypeText(device.type) }}
         </a-tag>
         <a-tag v-if="device.type === 'tcp'" color="orange" size="small">
           :{{ device.port || 9763 }}
         </a-tag>
         <a-tag v-if="device.type === 'http'" color="purple" size="small">
           :{{ device.port || 80 }}
+        </a-tag>
+        <a-tag v-if="device.type === 'pc' && device.pcConfig?.os" color="cyan" size="small">
+          {{ device.pcConfig.os.toUpperCase() }}
         </a-tag>
         <a-checkbox 
           :checked="selected"
@@ -175,6 +178,24 @@ const getStatusText = (status) => {
     case 'offline': return '离线';
     case 'unknown': return '未知';
     default: return '未知';
+  }
+};
+
+const getTypeColor = (type) => {
+  switch (type) {
+    case 'tcp': return 'blue';
+    case 'http': return 'green';
+    case 'pc': return 'volcano';
+    default: return 'default';
+  }
+};
+
+const getTypeText = (type) => {
+  switch (type) {
+    case 'tcp': return 'TCP';
+    case 'http': return 'HTTP';
+    case 'pc': return 'PC';
+    default: return type?.toUpperCase() || 'UNKNOWN';
   }
 };
 

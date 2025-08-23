@@ -78,3 +78,14 @@ yarn.lock
 
 # Windows specific
 nul
+
+# Application-specific backup files and temporary data
+backups/
+*.bak
+temp/
+tmp/
+.temp/
+
+# Auto-updater related files
+auto-updater-*
+electron-builder-cache/

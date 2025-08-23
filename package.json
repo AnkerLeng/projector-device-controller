@@ -35,22 +35,33 @@
   },
   "build": {
     "appId": "com.projector.manager",
-    "productName": "Projector Manager",
+    "productName": "光子运动 - 投影设备管理器",
     "directories": {
       "output": "dist-electron"
     },
     "files": [
       "dist/**/*",
-      "src-electron/**/*"
+      "src-electron/**/*",
+      "app.png",
+      "app.ico"
     ],
     "mac": {
-      "category": "public.app-category.utilities"
+      "category": "public.app-category.utilities",
+      "icon": "app.png"
     },
     "win": {
-      "target": "nsis"
+      "target": "nsis",
+      "icon": "app.ico"
     },
     "linux": {
-      "target": "AppImage"
+      "target": "AppImage",
+      "icon": "app.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "app.ico",
+      "uninstallerIcon": "app.ico"
     }
   },
   "keywords": [
