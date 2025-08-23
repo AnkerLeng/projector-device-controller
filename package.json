@@ -68,14 +68,15 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "your-github-username",
-      "repo": "projector-manager"
+      "owner": "projector-manager-system",
+      "repo": "projector-device-controller"
     }
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/your-github-username/projector-manager.git"
+    "url": "https://github.com/projector-manager-system/projector-device-controller.git"
   },
+  "homepage": "https://github.com/projector-manager-system/projector-device-controller#readme",
   "keywords": [
     "projector",
     "device-management",
