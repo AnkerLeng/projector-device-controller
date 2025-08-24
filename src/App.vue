@@ -6,7 +6,7 @@
       <div class="header-content">
         <h1 class="title">
           <DesktopOutlined />
-          投影设备管理器 [测试版 v1.0.2]
+          投影设备管理器 [修复版 v1.0.3]
         </h1>
         <a-space>
           <a-button type="primary" @click="showAddDeviceModal = true" data-tour="add-device">

@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const net = require('net');
 const axios = require('axios');
 const { updateElectronApp } = require('update-electron-app');
+const { autoUpdater } = require('electron-updater');
 const log = require('electron-log');
 const DataManager = require('./data-manager');
 const PCController = require('./pc-controller');
@@ -19,18 +20,46 @@ log.transports.file.level = 'info';
 log.transports.console.level = isDev ? 'debug' : 'info';
 log.transports.file.maxSize = 5 * 1024 * 1024; // 5MB
 
-// 初始化自动更新 (只在生产环境)
+// 手动更新检查配置 (不自动检查，只在用户点击时检查)
 if (!isDev) {
   try {
-    updateElectronApp({
-      updateInterval: '1 hour', // 每小时检查一次更新
-      logger: log,
-      notifyUser: true, // 通知用户有可用更新
-      // 私有仓库配置
-      repo: 'AnkerLeng/projector-device-controller',
-      host: 'https://api.github.com'
+    // 配置autoUpdater但不自动检查
+    autoUpdater.logger = log;
+    autoUpdater.checkForUpdatesAndNotify = false; // 禁用自动检查
+    
+    // 监听更新事件
+    autoUpdater.on('checking-for-update', () => {
+      log.info('Checking for update...');
     });
-    log.info('Auto-updater initialized for private repository');
+    
+    autoUpdater.on('update-available', (info) => {
+      log.info('Update available:', info.version);
+    });
+    
+    autoUpdater.on('update-not-available', (info) => {
+      log.info('Update not available:', info.version);
+    });
+    
+    autoUpdater.on('error', (err) => {
+      log.error('Error in auto-updater:', err);
+    });
+    
+    autoUpdater.on('download-progress', (progressObj) => {
+      let log_message = "Download speed: " + progressObj.bytesPerSecond;
+      log_message = log_message + ' - Downloaded ' + progressObj.percent + '%';
+      log_message = log_message + ' (' + progressObj.transferred + "/" + progressObj.total + ')';
+      log.info(log_message);
+    });
+    
+    autoUpdater.on('update-downloaded', (info) => {
+      log.info('Update downloaded:', info.version);
+      // 通知渲染进程更新已下载
+      if (mainWindow) {
+        mainWindow.webContents.send('update-downloaded', info);
+      }
+    });
+    
+    log.info('Manual updater initialized - will only check when user clicks');
   } catch (error) {
     log.error('Failed to initialize auto-updater:', error);
   }
@@ -910,8 +939,10 @@ ipcMain.handle('check-for-updates', async () => {
   }
   
   try {
-    // update-electron-app 会自动检查更新，这里只是返回当前状态
-    return { success: true, message: 'Update check initiated' };
+    log.info('User requested manual update check');
+    const result = await autoUpdater.checkForUpdatesAndNotify();
+    log.info('Manual update check result:', result);
+    return { success: true, message: 'Update check completed', result };
   } catch (error) {
     log.error('Manual update check failed:', error);
     return { success: false, error: error.message };
@@ -924,6 +955,12 @@ ipcMain.handle('get-update-status', () => {
     version: app.getVersion(),
     autoUpdaterEnabled: !isDev
   };
+});
+
+ipcMain.handle('restart-and-install-update', () => {
+  if (!isDev) {
+    autoUpdater.quitAndInstall();
+  }
 });
 
 // Electron app setup

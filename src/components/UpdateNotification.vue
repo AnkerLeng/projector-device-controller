@@ -44,6 +44,7 @@
       <!-- 更新检查按钮 -->
       <a-space direction="vertical" style="width: 100%;">
         <a-button 
+          v-if="!updateDownloaded"
           type="primary" 
           block 
           :loading="checking"
@@ -55,6 +56,30 @@
           </template>
           检查更新
         </a-button>
+        
+        <!-- 重启安装按钮 -->
+        <a-button 
+          v-if="updateDownloaded"
+          type="primary" 
+          danger
+          block 
+          @click="restartAndInstall"
+        >
+          <template #icon>
+            <SyncOutlined />
+          </template>
+          重启并安装更新
+        </a-button>
+        
+        <!-- 显示更新信息 -->
+        <div v-if="updateDownloaded && updateInfo" class="update-info">
+          <a-alert
+            :message="`新版本 v${updateInfo.version} 已下载完成`"
+            type="success"
+            size="small"
+            show-icon
+          />
+        </div>
         
         <div v-if="updateStatus.isDev" class="dev-notice">
           <a-alert
@@ -99,6 +124,8 @@ import {
 const showUpdateInfo = ref(false);
 const checking = ref(false);
 const currentVersion = ref('1.0.0');
+const updateDownloaded = ref(false);
+const updateInfo = ref(null);
 
 const updateStatus = reactive({
   isDev: false,
@@ -155,9 +182,27 @@ const hideUpdateInfo = () => {
   showUpdateInfo.value = false;
 };
 
+// 处理重启安装更新
+const restartAndInstall = async () => {
+  try {
+    await window.electronAPI.restartAndInstallUpdate();
+  } catch (error) {
+    console.error('Failed to restart and install:', error);
+    message.error('重启安装失败');
+  }
+};
+
 // 组件挂载时加载状态
 onMounted(() => {
   loadUpdateStatus();
+  
+  // 监听更新下载完成事件
+  window.electronAPI.onUpdateDownloaded((event, info) => {
+    updateDownloaded.value = true;
+    updateInfo.value = info;
+    message.success(`v${info.version} 下载完成，可以重启安装`, 0); // 持续显示
+    showUpdateInfo.value = true; // 显示更新面板
+  });
 });
 </script>
 
