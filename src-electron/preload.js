@@ -39,5 +39,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
   restartAndInstallUpdate: () => ipcRenderer.invoke('restart-and-install-update'),
   
   // 监听更新事件
-  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', callback)
+  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', callback),
+  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', callback),
+  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', callback)
 });

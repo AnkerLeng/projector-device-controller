@@ -1,6 +1,6 @@
 {
   "name": "projector-manager",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "投影设备管理器 - 支持TCP和HTTP协议的投影仪控制系统",
   "main": "src-electron/main.js",
   "scripts": {
@@ -47,7 +47,8 @@
       "dist/**/*",
       "src-electron/**/*",
       "app.png",
-      "app.ico"
+      "app.ico",
+      "app-update.yml"
     ],
     "mac": {
       "category": "public.app-category.utilities",
@@ -70,7 +71,9 @@
     "publish": {
       "provider": "github",
       "owner": "AnkerLeng",
-      "repo": "projector-device-controller"
+      "repo": "projector-device-controller",
+      "private": false,
+      "releaseType": "release"
     }
   },
   "repository": {

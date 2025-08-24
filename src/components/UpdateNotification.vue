@@ -161,7 +161,15 @@ const checkForUpdates = async () => {
     const result = await window.electronAPI.checkForUpdates();
     
     if (result.success) {
-      message.success('更新检查已启动，如有可用更新将自动下载');
+      if (result.isUpToDate) {
+        message.info('当前版本已是最新版本');
+      } else if (result.hasUpdate) {
+        message.success(`${result.message}，您可以前往GitHub下载`);
+        // 显示下载链接或直接打开下载页面
+        console.log('Download URL:', result.downloadUrl);
+      } else {
+        message.success('更新检查已启动，如有可用更新将自动下载');
+      }
     } else {
       message.warning(result.error || '更新检查失败');
     }
@@ -196,7 +204,18 @@ const restartAndInstall = async () => {
 onMounted(() => {
   loadUpdateStatus();
   
-  // 监听更新下载完成事件
+  // 监听更新事件
+  window.electronAPI.onUpdateAvailable((event, info) => {
+    console.log('Update available:', info);
+    message.info(`发现新版本 v${info.version}，正在下载...`);
+    showUpdateInfo.value = true;
+  });
+  
+  window.electronAPI.onUpdateNotAvailable((event, info) => {
+    console.log('No updates available:', info);
+    message.info('当前版本已是最新版本');
+  });
+  
   window.electronAPI.onUpdateDownloaded((event, info) => {
     updateDownloaded.value = true;
     updateInfo.value = info;

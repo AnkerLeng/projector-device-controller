@@ -1,0 +1,6 @@
+provider: github
+owner: AnkerLeng
+repo: projector-device-controller
+private: false
+releaseType: release
+publisherName: AnkerLeng

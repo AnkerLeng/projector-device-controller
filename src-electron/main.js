@@ -25,7 +25,20 @@ if (!isDev) {
   try {
     // 配置autoUpdater但不自动检查
     autoUpdater.logger = log;
-    autoUpdater.checkForUpdatesAndNotify = false; // 禁用自动检查
+    autoUpdater.autoDownload = true; // 找到更新时自动下载
+    autoUpdater.autoInstallOnAppQuit = true; // 退出时自动安装
+    
+    // 不使用setFeedURL，让electron-updater从package.json自动获取配置
+    // autoUpdater会自动从package.json的publish字段读取配置
+    
+    // 如果需要GitHub token（对于私有仓库或提高API限制）
+    // 注意：这个token应该从环境变量获取，不要硬编码
+    if (process.env.GH_TOKEN) {
+      process.env.GH_TOKEN = process.env.GH_TOKEN; // 确保环境变量可用
+      log.info('GitHub token found, will use for API access');
+    } else {
+      log.info('No GitHub token, using public API access');
+    }
     
     // 监听更新事件
     autoUpdater.on('checking-for-update', () => {
@@ -34,10 +47,18 @@ if (!isDev) {
     
     autoUpdater.on('update-available', (info) => {
       log.info('Update available:', info.version);
+      // 通知渲染进程有更新可用
+      if (mainWindow) {
+        mainWindow.webContents.send('update-available', info);
+      }
     });
     
     autoUpdater.on('update-not-available', (info) => {
       log.info('Update not available:', info.version);
+      // 通知渲染进程没有更新
+      if (mainWindow) {
+        mainWindow.webContents.send('update-not-available', info);
+      }
     });
     
     autoUpdater.on('error', (err) => {
@@ -940,14 +961,87 @@ ipcMain.handle('check-for-updates', async () => {
   
   try {
     log.info('User requested manual update check');
-    const result = await autoUpdater.checkForUpdatesAndNotify();
-    log.info('Manual update check result:', result);
-    return { success: true, message: 'Update check completed', result };
+    
+    // 使用GitHub Releases Atom Feed来获取版本信息
+    try {
+      const response = await axios.get('https://github.com/AnkerLeng/projector-device-controller/releases.atom', {
+        headers: {
+          'User-Agent': 'projector-manager-updater/1.0.0',
+          'Accept': 'application/atom+xml'
+        },
+        timeout: 10000
+      });
+      
+      // 解析Atom XML
+      const xmlData = response.data;
+      log.info('Atom feed response received');
+      
+      // 从XML中提取最新版本
+      const entryMatch = xmlData.match(/<entry>[\s\S]*?<\/entry>/);
+      if (!entryMatch) {
+        throw new Error('No releases found in feed');
+      }
+      
+      const titleMatch = entryMatch[0].match(/<title>(.*?)<\/title>/);
+      if (!titleMatch) {
+        throw new Error('Could not parse release title');
+      }
+      
+      const latestVersion = titleMatch[1]; // 例如: "v1.0.3"
+      const currentVersion = app.getVersion(); // 例如: "1.0.1"
+      
+      log.info(`Current version: v${currentVersion}, Latest from Atom feed: ${latestVersion}`);
+      
+      if (isNewerVersion(latestVersion.replace('v', ''), currentVersion)) {
+        log.info(`Update available: v${currentVersion} -> ${latestVersion}`);
+        
+        // 通知渲染进程有更新可用
+        if (mainWindow) {
+          const releaseInfo = {
+            version: latestVersion.replace('v', ''),
+            releaseNotes: 'New version available',
+            downloadUrl: `https://github.com/AnkerLeng/projector-device-controller/releases/download/${latestVersion}/projector-manager-setup-${latestVersion.replace('v', '')}.exe`
+          };
+          mainWindow.webContents.send('update-available', releaseInfo);
+        }
+        
+        return { 
+          success: true, 
+          message: `发现新版本 ${latestVersion}`, 
+          hasUpdate: true,
+          latestVersion: latestVersion,
+          downloadUrl: `https://github.com/AnkerLeng/projector-device-controller/releases/download/${latestVersion}/projector-manager-setup-${latestVersion.replace('v', '')}.exe`
+        };
+      } else {
+        log.info('Already up to date');
+        return { success: true, message: '当前版本已是最新版本', isUpToDate: true };
+      }
+      
+    } catch (feedError) {
+      log.error('Atom feed failed:', feedError.message);
+      return { success: false, error: `更新检查失败: ${feedError.message}` };
+    }
+    
   } catch (error) {
     log.error('Manual update check failed:', error);
     return { success: false, error: error.message };
   }
 });
+
+// 版本比较辅助函数
+function isNewerVersion(latest, current) {
+  const parseVersion = (v) => v.split('.').map(n => parseInt(n, 10));
+  const latestParts = parseVersion(latest);
+  const currentParts = parseVersion(current);
+  
+  for (let i = 0; i < Math.max(latestParts.length, currentParts.length); i++) {
+    const l = latestParts[i] || 0;
+    const c = currentParts[i] || 0;
+    if (l > c) return true;
+    if (l < c) return false;
+  }
+  return false;
+}
 
 ipcMain.handle('get-update-status', () => {
   return {
