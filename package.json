@@ -69,7 +69,8 @@
     "publish": {
       "provider": "github",
       "owner": "ankerLeng",
-      "repo": "projector-device-controller"
+      "repo": "projector-device-controller",
+      "private": true
     }
   },
   "repository": {

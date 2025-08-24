@@ -25,9 +25,12 @@ if (!isDev) {
     updateElectronApp({
       updateInterval: '1 hour', // 每小时检查一次更新
       logger: log,
-      notifyUser: true // 通知用户有可用更新
+      notifyUser: true, // 通知用户有可用更新
+      // 私有仓库配置
+      repo: 'ankerLeng/projector-device-controller',
+      host: 'https://api.github.com'
     });
-    log.info('Auto-updater initialized');
+    log.info('Auto-updater initialized for private repository');
   } catch (error) {
     log.error('Failed to initialize auto-updater:', error);
   }
