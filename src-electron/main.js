@@ -27,7 +27,7 @@ if (!isDev) {
       logger: log,
       notifyUser: true, // 通知用户有可用更新
       // 私有仓库配置
-      repo: 'ankerLeng/projector-device-controller',
+      repo: 'AnkerLeng/projector-device-controller',
       host: 'https://api.github.com'
     });
     log.info('Auto-updater initialized for private repository');

@@ -68,16 +68,15 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "ankerLeng",
-      "repo": "projector-device-controller",
-      "private": true
+      "owner": "AnkerLeng",
+      "repo": "projector-device-controller"
     }
   },
   "repository": {
     "type": "git",
-    "url": "git@github.com:ankerLeng/projector-device-controller.git"
+    "url": "git@github.com:AnkerLeng/projector-device-controller.git"
   },
-  "homepage": "https://github.com/ankerLeng/projector-device-controller#readme",
+  "homepage": "https://github.com/AnkerLeng/projector-device-controller#readme",
   "keywords": [
     "projector",
     "device-management",
