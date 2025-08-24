@@ -1,6 +1,6 @@
 {
   "name": "projector-manager",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "投影设备管理器 - 支持TCP和HTTP协议的投影仪控制系统",
   "main": "src-electron/main.js",
   "scripts": {
