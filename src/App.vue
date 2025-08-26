@@ -6,7 +6,7 @@
       <div class="header-content">
         <h1 class="title">
           <DesktopOutlined />
-          投影设备管理器 [更新测试 v1.0.4]
+          投影设备管理器 v1.1.0
         </h1>
         <a-space>
           <a-button type="primary" @click="showAddDeviceModal = true" data-tour="add-device">
@@ -407,12 +407,23 @@
 
     <!-- Update Notification Component -->
     <UpdateNotification />
+    
+    <!-- Batch Progress Modal -->
+    <BatchProgressModal
+      ref="batchProgressModalRef"
+      v-model:visible="showBatchProgressModal"
+      :action="batchProgressAction"
+      :devices="selectedDevices.map(id => devices.find(d => d.id === id)).filter(Boolean)"
+      @cancel="handleBatchProgressCancel"
+      @complete="handleBatchProgressComplete"
+      @retry-failed="handleRetryFailedDevices"
+    />
   </a-layout>
   </a-app>
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onUnmounted, reactive, h } from 'vue';
+import { ref, computed, onMounted, onUnmounted, reactive, h, nextTick } from 'vue';
 import { message, notification } from 'ant-design-vue';
 import { 
   DesktopOutlined, 
@@ -438,6 +449,7 @@ import DeviceCard from './components/DeviceCard.vue';
 import AddDeviceModal from './components/AddDeviceModal.vue';
 import DeviceGroup from './components/DeviceGroup.vue';
 import UpdateNotification from './components/UpdateNotification.vue';
+import BatchProgressModal from './components/BatchProgressModal.vue';
 
 // Reactive data
 const devices = ref([]);
@@ -446,6 +458,7 @@ const selectedDevices = ref([]);
 const showAddDeviceModal = ref(false);
 const editingDevice = ref(null);
 const batchLoading = ref(false);
+const currentBatchOperationId = ref(null);
 
 // Room management state
 const showAddRoomModal = ref(false);
@@ -489,6 +502,11 @@ const tourCurrent = ref(0);
 const monitoringEnabled = ref(false);
 const monitoringInterval = ref(null);
 const monitoringIntervalTime = ref(30000); // 30 seconds default
+
+// Batch progress modal
+const showBatchProgressModal = ref(false);
+const batchProgressAction = ref('powerOn');
+const batchProgressModalRef = ref();
 
 // Tour steps configuration
 const tourSteps = computed(() => [
@@ -741,9 +759,40 @@ const batchPowerControl = async (action) => {
   if (selectedDevices.value.length === 0) return;
 
   try {
-    if (!window.electronAPI || !window.electronAPI.batchDeviceControl) {
+    if (!window.electronAPI) {
       throw new Error('electronAPI 未初始化');
     }
+    
+    // 检查是否支持进度版本的API
+    const supportsProgress = window.electronAPI.batchDeviceControlWithProgress && 
+                            window.electronAPI.onBatchProgress;
+    
+    if (!supportsProgress) {
+      // 如果不支持进度API，回退到原始批量控制
+      console.warn('进度API不可用，使用原始批量控制方法');
+      return await fallbackBatchControl(action);
+    }
+    
+    // 准备设备信息用于进度对话框
+    const selectedDevicesInfo = selectedDevices.value.map(deviceId => {
+      const device = devices.value.find(d => d.id === deviceId);
+      return device ? {
+        id: device.id,
+        name: device.name,
+        ip: device.ip,
+        type: device.type
+      } : null;
+    }).filter(Boolean);
+    
+    // 显示进度对话框
+    batchProgressAction.value = action;
+    showBatchProgressModal.value = true;
+    
+    // 等待DOM更新
+    await nextTick();
+    
+    // 启动批量操作
+    batchProgressModalRef.value?.startBatchOperation();
     
     batchLoading.value = true;
     
@@ -751,41 +800,28 @@ const batchPowerControl = async (action) => {
     const cleanDeviceIds = [...selectedDevices.value].map(id => String(id));
     console.log('批量操作设备ID列表:', cleanDeviceIds);
     
-    const result = await window.electronAPI.batchDeviceControl(cleanDeviceIds, action);
+    const result = await window.electronAPI.batchDeviceControlWithProgress(cleanDeviceIds, action);
+    
+    // 保存操作ID用于取消功能
+    if (result.success && result.operationId) {
+      currentBatchOperationId.value = result.operationId;
+    }
+    
+    // 通知进度对话框批量操作完成
+    batchProgressModalRef.value?.completeBatchOperation();
     
     if (result.success) {
       const { successful, failed, total, totalAttempts, maxAttempts } = result.summary;
       
-      if (failed === 0) {
-        message.success(`批量操作完成，成功控制 ${successful} 台设备${totalAttempts > successful ? ` (总共重试 ${totalAttempts} 次)` : ''}`);
-        addLog('success', `批量${action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询'}完成`, {
-          successful,
-          failed,
-          total,
-          totalAttempts,
-          maxAttempts
-        });
-      } else {
-        const actionText = action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询';
-        notification.warning({
-          message: `批量${actionText}完成`,
-          description: `成功 ${successful} 台，失败 ${failed} 台，共 ${total} 台设备${totalAttempts > 0 ? `\n总重试次数: ${totalAttempts}，最大重试次数: ${maxAttempts}` : ''}`,
-          duration: 6
-        });
-        
-        // 记录失败的设备详情
-        const failedDevices = result.results.filter(r => !r.success);
-        addLog('warning', `批量${actionText}部分失败`, {
-          successful,
-          failed,
-          totalAttempts,
-          failedDevices: failedDevices.map(d => ({
-            name: d.deviceName,
-            error: d.error,
-            attempts: d.attempts
-          }))
-        });
-      }
+      // 记录日志
+      const actionText = action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询';
+      addLog(failed === 0 ? 'success' : 'warning', `批量${actionText}完成`, {
+        successful,
+        failed,
+        total,
+        totalAttempts,
+        maxAttempts
+      });
       
       // Update device status
       result.results.forEach(({ deviceId, success, attempts }) => {
@@ -806,6 +842,65 @@ const batchPowerControl = async (action) => {
     }
   } catch (error) {
     message.error('批量操作失败: ' + error.message);
+  } finally {
+    batchLoading.value = false;
+    // 清除操作ID
+    currentBatchOperationId.value = null;
+  }
+};
+
+// 回退的批量控制方法（不带进度对话框）
+const fallbackBatchControl = async (action) => {
+  try {
+    if (!window.electronAPI.batchDeviceControl) {
+      throw new Error('批量控制API不可用');
+    }
+    
+    batchLoading.value = true;
+    
+    // 确保传递的是纯净的数组，移除Vue响应式代理
+    const cleanDeviceIds = [...selectedDevices.value].map(id => String(id));
+    console.log('使用原始批量操作，设备ID列表:', cleanDeviceIds);
+    
+    const result = await window.electronAPI.batchDeviceControl(cleanDeviceIds, action);
+    
+    if (result.success) {
+      const { successful, failed, total, totalAttempts, maxAttempts } = result.summary;
+      
+      if (failed === 0) {
+        message.success(`批量操作完成，成功控制 ${successful} 台设备${totalAttempts > successful ? ` (总共重试 ${totalAttempts} 次)` : ''}`);
+      } else {
+        const actionText = action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询';
+        notification.warning({
+          message: `批量${actionText}完成`,
+          description: `成功 ${successful} 台，失败 ${failed} 台，共 ${total} 台设备`,
+          duration: 6
+        });
+      }
+      
+      // 记录日志
+      const actionText = action === 'powerOn' ? '开机' : action === 'powerOff' ? '关机' : '状态查询';
+      addLog(failed === 0 ? 'success' : 'warning', `批量${actionText}完成`, {
+        successful,
+        failed,
+        total,
+        totalAttempts,
+        maxAttempts
+      });
+      
+      // Update device status
+      result.results.forEach(({ deviceId, success, attempts }) => {
+        const device = devices.value.find(d => d.id === deviceId);
+        if (device) {
+          if (success) {
+            device.status = action === 'powerOn' ? 'online' : action === 'powerOff' ? 'offline' : 'online';
+          }
+        }
+      });
+    } else {
+      message.error('批量操作失败: ' + result.error);
+      addLog('error', '批量操作失败', { error: result.error });
+    }
   } finally {
     batchLoading.value = false;
   }
@@ -1670,6 +1765,49 @@ const performMonitoringCheck = async () => {
   }
 };
 
+// 批量进度对话框事件处理
+const handleBatchProgressCancel = async () => {
+  try {
+    // 调用取消批量操作的API
+    if (window.electronAPI && window.electronAPI.cancelBatchOperation) {
+      await window.electronAPI.cancelBatchOperation(currentBatchOperationId.value);
+      
+      // 通知进度对话框更新UI状态为取消
+      batchProgressModalRef.value?.cancelBatchOperation();
+      
+      addLog('info', '用户取消了批量操作', { operationId: currentBatchOperationId.value });
+      
+      // 清除操作ID
+      currentBatchOperationId.value = null;
+    } else {
+      message.warning('取消功能不可用');
+      addLog('warning', '取消功能不可用，可能是API版本问题');
+    }
+  } catch (error) {
+    console.error('取消批量操作失败:', error);
+    message.error('取消操作失败: ' + error.message);
+    addLog('error', '取消批量操作失败', { error: error.message });
+  } finally {
+    batchLoading.value = false;
+  }
+};
+
+const handleBatchProgressComplete = (results) => {
+  showBatchProgressModal.value = false;
+  addLog('info', '批量进度对话框已关闭', results);
+};
+
+const handleRetryFailedDevices = (failedDevices) => {
+  // 重新执行失败的设备
+  const deviceIds = failedDevices.map(d => d.id);
+  selectedDevices.value = deviceIds;
+  
+  // 重新启动批量操作
+  setTimeout(() => {
+    batchPowerControl(batchProgressAction.value);
+  }, 100);
+};
+
 // Lifecycle
 onMounted(async () => {
   addLog('info', '投影设备管理器启动');
@@ -1679,6 +1817,24 @@ onMounted(async () => {
     addLog('success', 'Electron API 初始化成功', {
       availableMethods: Object.keys(window.electronAPI)
     });
+    
+    // 监听批量操作进度事件
+    if (window.electronAPI.onBatchProgress) {
+      window.electronAPI.onBatchProgress((event, data) => {
+        // 更新进度对话框中的设备状态
+        if (batchProgressModalRef.value) {
+          batchProgressModalRef.value.updateProgress(
+            data.deviceId,
+            data.status,
+            data.message,
+            data.attempts || 1
+          );
+        }
+      });
+      addLog('info', '批量操作进度监听已启用');
+    } else {
+      addLog('info', '批量操作进度API不可用，将使用原始批量控制');
+    }
   } else {
     addLog('error', 'Electron API 未找到，设备控制功能将不可用', {
       environment: 'web',

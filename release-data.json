@@ -1,0 +1,8 @@
+{
+  "tag_name": "v1.0.4",
+  "target_commitish": "main",
+  "name": "v1.0.4 - Update Test Release",
+  "body": "New version for testing update functionality. Features custom Atom feed update checker to bypass GitHub API issues.",
+  "draft": false,
+  "prerelease": false
+}

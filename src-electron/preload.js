@@ -13,6 +13,14 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Batch operations
   batchDeviceControl: (deviceIds, action) =>
     ipcRenderer.invoke('batch-device-control', deviceIds, action),
+  
+  // Batch operations with progress
+  batchDeviceControlWithProgress: (deviceIds, action) =>
+    ipcRenderer.invoke('batch-device-control-with-progress', deviceIds, action),
+  
+  // Cancel batch operation
+  cancelBatchOperation: (operationId) =>
+    ipcRenderer.invoke('cancel-batch-operation', operationId),
 
   // Device Groups management
   getDeviceGroups: () => ipcRenderer.invoke('get-device-groups'),
@@ -41,5 +49,8 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // 监听更新事件
   onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', callback),
   onUpdateAvailable: (callback) => ipcRenderer.on('update-available', callback),
-  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', callback)
+  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', callback),
+  
+  // 监听批量操作进度事件
+  onBatchProgress: (callback) => ipcRenderer.on('batch-progress', callback)
 });

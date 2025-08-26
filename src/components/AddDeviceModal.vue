@@ -101,7 +101,7 @@
             @change="applyTcpPreset"
             style="width: 100%"
           >
-            <a-select-option value="power">POWER命令 (开机: POWER1, 关机: POWER0)</a-select-option>
+            <a-select-option value="power">POWER命令 (开机: power1, 关机: power0)</a-select-option>
             <a-select-option value="simple">简单文本命令</a-select-option>
             <a-select-option value="pjlink">PJLink 协议</a-select-option>
           </a-select>
@@ -525,9 +525,9 @@ const applyTcpPreset = (preset) => {
       status: '%1POWR ?\\r'
     },
     power: {
-      powerOn: 'POWER1',
-      powerOff: 'POWER0',
-      status: 'POWER?'
+      powerOn: 'power1',
+      powerOff: 'power0',
+      status: 'power?'
     }
   };
   
