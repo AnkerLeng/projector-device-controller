@@ -61,7 +61,7 @@
 
     <a-layout>
       <!-- Sidebar -->
-      <a-layout-sider width="250" theme="light" class="sidebar">
+      <a-layout-sider width="280" theme="light" class="sidebar">
         <div class="sidebar-content">
           <div class="room-header">
             <h3>房间管理</h3>
@@ -103,7 +103,7 @@
                       <a-menu @click="handleRoomMenuClick($event, room)">
                         <a-menu-item key="edit">
                           <EditOutlined />
-                          编辑房
+                          编辑房间
                         </a-menu-item>
                         <a-menu-item key="delete" :disabled="room.deviceCount > 0">
                           <DeleteOutlined />
@@ -1908,8 +1908,8 @@ onUnmounted(() => {
 .sidebar {
   background: #fff;
   border-right: 1px solid #f0f0f0;
-  min-width: 250px;
-  width: 250px;
+  min-width: 280px;
+  width: 280px;
 }
 
 .sidebar-content {
@@ -1965,7 +1965,7 @@ onUnmounted(() => {
   text-overflow: ellipsis;
   white-space: nowrap;
   font-size: 14px;
-  max-width: 120px;
+  max-width: 180px;
 }
 
 /* 这个样式已经在下面重新定义了 */
@@ -2046,7 +2046,7 @@ onUnmounted(() => {
 
 /* 确保每个房间操作区域都有相同的宽度并右对齐 */
 .room-actions {
-  width: 80px;
+  width: 70px;
   display: flex;
   align-items: center;
   justify-content: flex-end;
@@ -2084,18 +2084,18 @@ onUnmounted(() => {
 /* 响应式设计 */
 @media (max-width: 1400px) {
   .room-name {
-    max-width: 100px;
+    max-width: 160px;
   }
 }
 
 @media (max-width: 1200px) {
   .room-name {
-    max-width: 80px;
+    max-width: 130px;
   }
   
   .sidebar {
-    width: 220px;
-    min-width: 220px;
+    width: 250px;
+    min-width: 250px;
   }
 }
 

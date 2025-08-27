@@ -62,6 +62,7 @@
           mode="combobox"
           placeholder="选择或输入房间名称"
           :options="roomOptions"
+          show-search
           @search="onRoomSearch"
         />
       </a-form-item>
