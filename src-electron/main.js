@@ -608,7 +608,10 @@ ipcMain.handle('get-devices', async () => {
 });
 
 ipcMain.handle('save-device', async (event, device) => {
-  return await dataManager.saveDevice(device);
+  console.log('Main: Received device to save:', device);
+  const result = await dataManager.saveDevice(device);
+  console.log('Main: Device save result:', result);
+  return result;
 });
 
 ipcMain.handle('delete-device', async (event, deviceId) => {

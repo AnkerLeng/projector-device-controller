@@ -171,32 +171,61 @@ class DataManager {
 
   // 数据验证
   validateDeviceData(device) {
+    console.log('DataManager: 开始验证设备数据:', device);
+    
     const required = ['name', 'ip', 'type'];
     const missing = required.filter(field => !device[field]);
     
     if (missing.length > 0) {
+      console.log('DataManager: 缺少必填字段:', missing);
       throw new Error(`Missing required fields: ${missing.join(', ')}`);
     }
     
     // IP地址格式验证
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
     if (!ipRegex.test(device.ip)) {
+      console.log('DataManager: IP地址格式无效:', device.ip);
       throw new Error('Invalid IP address format');
     }
     
     // 协议类型验证
-    if (!['tcp', 'http'].includes(device.type)) {
-      throw new Error('Invalid device type, must be tcp or http');
+    if (!['tcp', 'http', 'pc'].includes(device.type)) {
+      console.log('DataManager: 不支持的设备类型:', device.type);
+      throw new Error('Invalid device type, must be tcp, http, or pc');
     }
     
+    // PC设备特殊验证
+    if (device.type === 'pc') {
+      console.log('DataManager: 验证PC设备配置:', device.pcConfig);
+      if (device.pcConfig && device.pcConfig.macAddress) {
+        console.log('DataManager: PC设备包含MAC地址:', device.pcConfig.macAddress);
+      } else {
+        console.log('DataManager: PC设备缺少MAC地址配置');
+      }
+    }
+    
+    console.log('DataManager: 设备数据验证通过');
     return true;
   }
 
   // 增强的设备操作
   async saveDevice(device, forceAsNew = false) {
+    console.log('DataManager: Attempting to save device:', device);
+    console.log('DataManager: Device type:', device.type);
+    
+    if (device.type === 'pc') {
+      console.log('DataManager: 保存PC设备，pcConfig内容:', JSON.stringify(device.pcConfig, null, 2));
+    }
+    
     this.validateDeviceData(device);
     
     const devices = this.get('devices');
+    console.log('DataManager: Current devices count:', devices.length);
+    
+    if (device.type === 'pc') {
+      const existingPCDevices = devices.filter(d => d.type === 'pc');
+      console.log('DataManager: 当前PC设备数量:', existingPCDevices.length);
+    }
     
     if (device.id && !forceAsNew) {
       // 更新现有设备
@@ -225,14 +254,23 @@ class DataManager {
         if (device.httpAuth) {
           updatedDevice.httpAuth = { ...device.httpAuth };
         }
+        if (device.pcConfig) {
+          updatedDevice.pcConfig = { ...device.pcConfig };
+        }
         
         // 如果协议类型变化，清理不相关的配置
         if (device.type) {
           if (device.type === 'tcp') {
             delete updatedDevice.httpUrls;
             delete updatedDevice.httpAuth;
+            delete updatedDevice.pcConfig;
           } else if (device.type === 'http') {
             delete updatedDevice.tcpCommands;
+            delete updatedDevice.pcConfig;
+          } else if (device.type === 'pc') {
+            delete updatedDevice.tcpCommands;
+            delete updatedDevice.httpUrls;
+            delete updatedDevice.httpAuth;
           }
         }
         
@@ -258,6 +296,23 @@ class DataManager {
     }
     
     await this.save('devices', devices);
+    console.log('DataManager: Device saved successfully:', device);
+    console.log('DataManager: File path:', this.files.devices);
+    
+    // PC设备保存后验证
+    if (device.type === 'pc') {
+      const updatedDevices = this.get('devices');
+      const savedPCDevice = updatedDevices.find(d => d.id === device.id);
+      if (savedPCDevice) {
+        console.log('DataManager: PC设备保存验证成功，MAC地址:', savedPCDevice.pcConfig?.macAddress);
+      } else {
+        console.log('DataManager: 警告：PC设备保存后在缓存中未找到！');
+      }
+      
+      const pcDevicesCount = updatedDevices.filter(d => d.type === 'pc').length;
+      console.log('DataManager: 保存后PC设备总数:', pcDevicesCount);
+    }
+    
     return device;
   }
 
@@ -285,7 +340,8 @@ class DataManager {
       totalDevices: devices.length,
       devicesByType: {
         tcp: devices.filter(d => d.type === 'tcp').length,
-        http: devices.filter(d => d.type === 'http').length
+        http: devices.filter(d => d.type === 'http').length,
+        pc: devices.filter(d => d.type === 'pc').length
       },
       devicesByRoom: {},
       totalGroups: deviceGroups.length,

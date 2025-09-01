@@ -180,7 +180,7 @@
         
         <!-- WOL Configuration for Power On -->
         <a-card title="开机配置 (网络唤醒 WOL)" size="small" style="margin-bottom: 16px;">
-          <a-form-item label="MAC地址" name="pcConfig.macAddress" required>
+          <a-form-item label="MAC地址" :name="['pcConfig', 'macAddress']" required>
             <a-input 
               v-model:value="formData.pcConfig.macAddress" 
               placeholder="AA:BB:CC:DD:EE:FF"
@@ -193,7 +193,7 @@
 
           <a-row :gutter="16">
             <a-col :span="12">
-              <a-form-item label="广播地址" name="pcConfig.broadcastAddress">
+              <a-form-item label="广播地址" :name="['pcConfig', 'broadcastAddress']">
                 <a-input 
                   v-model:value="formData.pcConfig.broadcastAddress" 
                   placeholder="255.255.255.255"
@@ -201,7 +201,7 @@
               </a-form-item>
             </a-col>
             <a-col :span="12">
-              <a-form-item label="WOL端口" name="pcConfig.wolPort">
+              <a-form-item label="WOL端口" :name="['pcConfig', 'wolPort']">
                 <a-input-number 
                   v-model:value="formData.pcConfig.wolPort" 
                   :min="1" 
@@ -214,81 +214,7 @@
           </a-row>
         </a-card>
 
-        <!-- Shutdown Configuration -->
-        <a-card title="关机配置 (远程关机)" size="small" style="margin-bottom: 16px;">
-          <a-form-item label="操作系统" name="pcConfig.os" required>
-            <a-select v-model:value="formData.pcConfig.os">
-              <a-select-option value="windows">Windows</a-select-option>
-              <a-select-option value="linux">Linux</a-select-option>
-            </a-select>
-          </a-form-item>
 
-          <a-row :gutter="16">
-            <a-col :span="12">
-              <a-form-item label="用户名" name="pcConfig.username" required>
-                <a-input 
-                  v-model:value="formData.pcConfig.username" 
-                  placeholder="administrator / root"
-                />
-              </a-form-item>
-            </a-col>
-            <a-col :span="12">
-              <a-form-item label="密码" name="pcConfig.password" required>
-                <a-input-password 
-                  v-model:value="formData.pcConfig.password" 
-                  placeholder="登录密码"
-                />
-                <div class="form-tip">
-                  Linux系统也可以使用私钥文件路径 (如: ~/.ssh/id_rsa)
-                </div>
-              </a-form-item>
-            </a-col>
-          </a-row>
-
-          <a-form-item label="关机延时" name="pcConfig.shutdownTimeout">
-            <a-input-number 
-              v-model:value="formData.pcConfig.shutdownTimeout" 
-              :min="0" 
-              :max="3600"
-              addon-after="秒"
-              placeholder="30"
-              style="width: 100%"
-            />
-            <div class="form-tip">
-              关机前的等待时间，0表示立即关机
-            </div>
-          </a-form-item>
-        </a-card>
-
-        <!-- Status Check Configuration -->
-        <a-card title="状态检测配置" size="small">
-          <a-form-item label="检测端口" name="pcConfig.checkPort">
-            <a-input-number 
-              v-model:value="formData.pcConfig.checkPort" 
-              :min="1" 
-              :max="65535"
-              placeholder="3389 (RDP) / 22 (SSH)"
-              style="width: 100%"
-            />
-            <div class="form-tip">
-              可选: 用于检测PC服务状态的端口 (如RDP:3389, SSH:22)
-            </div>
-          </a-form-item>
-
-          <!-- PC Presets -->
-          <a-form-item label="快速配置">
-            <a-select 
-              placeholder="选择PC类型模板"
-              @change="applyPcPreset"
-              style="width: 100%"
-            >
-              <a-select-option value="windows-workstation">Windows工作站</a-select-option>
-              <a-select-option value="windows-server">Windows服务器</a-select-option>
-              <a-select-option value="linux-desktop">Linux桌面</a-select-option>
-              <a-select-option value="linux-server">Linux服务器</a-select-option>
-            </a-select>
-          </a-form-item>
-        </a-card>
       </div>
 
       <!-- Test Connection -->
@@ -352,16 +278,11 @@ const formData = reactive({
   pcConfig: {
     macAddress: '',
     broadcastAddress: '255.255.255.255',
-    wolPort: 9,
-    os: 'windows',
-    username: '',
-    password: '',
-    shutdownTimeout: 30,
-    checkPort: null
+    wolPort: 9
   }
 });
 
-const formRules = {
+const formRules = reactive({
   name: [
     { required: true, message: '请输入设备名称' }
   ],
@@ -372,54 +293,26 @@ const formRules = {
   type: [
     { required: true, message: '请选择设备类型' }
   ],
-  'pcConfig.macAddress': [
-    { 
-      validator: (rule, value) => {
-        if (formData.type === 'pc' && !value) {
-          return Promise.reject('请输入MAC地址');
-        }
-        if (value && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$/.test(value)) {
-          return Promise.reject('MAC地址格式不正确');
-        }
-        return Promise.resolve();
-      },
-      trigger: 'blur'
-    }
-  ],
-  'pcConfig.os': [
-    { 
-      validator: (rule, value) => {
-        if (formData.type === 'pc' && !value) {
-          return Promise.reject('请选择操作系统');
-        }
-        return Promise.resolve();
-      },
-      trigger: 'change'
-    }
-  ],
-  'pcConfig.username': [
-    { 
-      validator: (rule, value) => {
-        if (formData.type === 'pc' && !value) {
-          return Promise.reject('请输入用户名');
-        }
-        return Promise.resolve();
-      },
-      trigger: 'blur'
-    }
-  ],
-  'pcConfig.password': [
-    { 
-      validator: (rule, value) => {
-        if (formData.type === 'pc' && !value) {
-          return Promise.reject('请输入密码');
-        }
-        return Promise.resolve();
-      },
-      trigger: 'blur'
-    }
-  ]
-};
+  pcConfig: {
+    macAddress: [
+      { 
+        validator: (rule, value) => {
+          if (formData.type === 'pc' && (!value || value.trim() === '')) {
+            return Promise.reject('请输入MAC地址');
+          }
+          if (formData.type !== 'pc') {
+            return Promise.resolve();
+          }
+          if (value && !/^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$|^[0-9A-Fa-f]{12}$/.test(value.trim())) {
+            return Promise.reject('MAC地址格式不正确');
+          }
+          return Promise.resolve();
+        },
+        trigger: ['blur', 'change']
+      }
+    ]
+  }
+});
 
 const roomOptions = computed(() => {
   return props.rooms.map(room => ({
@@ -456,12 +349,7 @@ const resetForm = () => {
     pcConfig: {
       macAddress: '',
       broadcastAddress: '255.255.255.255',
-      wolPort: 9,
-      os: 'windows',
-      username: '',
-      password: '',
-      shutdownTimeout: 30,
-      checkPort: null
+      wolPort: 9
     }
   });
   testResult.value = null;
@@ -475,23 +363,22 @@ const visible = computed({
 // Watch for device prop changes
 watch(() => props.device, (newDevice) => {
   if (newDevice) {
+    console.log('Loading device for edit:', newDevice);
+    console.log('Device pcConfig:', newDevice.pcConfig);
     Object.assign(formData, {
       ...newDevice,
       tcpCommands: { ...newDevice.tcpCommands || {} },
       httpUrls: { ...newDevice.httpUrls || {} },
       httpAuth: { ...newDevice.httpAuth || {} },
       pcConfig: { 
-        macAddress: '',
         broadcastAddress: '255.255.255.255',
         wolPort: 9,
-        os: 'windows',
-        username: '',
-        password: '',
-        shutdownTimeout: 30,
-        checkPort: null,
-        ...newDevice.pcConfig || {}
+        ...(newDevice.pcConfig || {}),
+        // 只有在没有保存的值时才设置默认空值
+        macAddress: (newDevice.pcConfig && newDevice.pcConfig.macAddress) || ''
       }
     });
+    console.log('Loaded formData.pcConfig:', formData.pcConfig);
   } else {
     resetForm();
   }
@@ -568,38 +455,6 @@ const applyHttpPreset = (preset) => {
   }
 };
 
-const applyPcPreset = (preset) => {
-  const presets = {
-    'windows-workstation': {
-      os: 'windows',
-      username: 'administrator',
-      shutdownTimeout: 30,
-      checkPort: 3389 // RDP
-    },
-    'windows-server': {
-      os: 'windows',
-      username: 'administrator',
-      shutdownTimeout: 60,
-      checkPort: 3389 // RDP
-    },
-    'linux-desktop': {
-      os: 'linux',
-      username: 'user',
-      shutdownTimeout: 30,
-      checkPort: 22 // SSH
-    },
-    'linux-server': {
-      os: 'linux',
-      username: 'root',
-      shutdownTimeout: 60,
-      checkPort: 22 // SSH
-    }
-  };
-  
-  if (presets[preset]) {
-    Object.assign(formData.pcConfig, presets[preset]);
-  }
-};
 
 const testConnection = async () => {
   try {
@@ -649,6 +504,8 @@ const handleSave = async () => {
     await formRef.value.validate();
     
     const deviceData = { ...formData };
+    console.log('Saving device data:', deviceData);
+    console.log('PC Config before cleanup:', deviceData.pcConfig);
     
     // Set default port if not provided (PC devices don't need default ports)
     if (!deviceData.port && deviceData.type !== 'pc') {
@@ -678,14 +535,21 @@ const handleSave = async () => {
       if (!deviceData.pcConfig.wolPort) {
         deviceData.pcConfig.wolPort = 9;
       }
-      if (!deviceData.pcConfig.shutdownTimeout) {
-        deviceData.pcConfig.shutdownTimeout = 30;
-      }
+      console.log('PC设备最终提交数据:', JSON.stringify(deviceData, null, 2));
+      console.log('PC设备MAC地址:', deviceData.pcConfig?.macAddress);
     }
     
     emit('save', deviceData);
   } catch (error) {
     console.error('Validation failed:', error);
+    if (error.errorFields && error.errorFields.length > 0) {
+      console.error('Failed fields:', error.errorFields.map(field => ({
+        name: field.name,
+        errors: field.errors
+      })));
+      const firstError = error.errorFields[0];
+      message.error(`验证失败: ${firstError.errors[0]}`);
+    }
   }
 };
 

@@ -89,3 +89,10 @@ tmp/
 # Auto-updater related files
 auto-updater-*
 electron-builder-cache/
+
+# GitHub tokens and sensitive files
+*.token
+github-token.txt
+.env.local
+create-release.ps1
+release-notes.md

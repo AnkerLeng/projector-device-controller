@@ -910,12 +910,18 @@ const handleSaveDevice = async (deviceData) => {
   // 创建干净的设备数据对象（移到try外部，便于错误处理时使用）
   const cleanDeviceData = createCleanDevice(deviceData);
   
+  console.log('App: 准备保存设备数据:', cleanDeviceData);
+  if (cleanDeviceData.type === 'pc') {
+    console.log('App: PC设备数据详情:', JSON.stringify(cleanDeviceData, null, 2));
+  }
+  
   try {
     if (!window.electronAPI || !window.electronAPI.saveDevice) {
       throw new Error('electronAPI 未初始化');
     }
     
     const result = await window.electronAPI.saveDevice(cleanDeviceData);
+    console.log('App: 设备保存结果:', result);
     
     if (editingDevice.value) {
       // Update existing device
@@ -1084,7 +1090,8 @@ const createCleanDevice = (device) => {
     room: device.room,
     tcpCommands: device.tcpCommands ? { ...device.tcpCommands } : undefined,
     httpUrls: device.httpUrls ? { ...device.httpUrls } : undefined,
-    httpAuth: device.httpAuth ? { ...device.httpAuth } : undefined
+    httpAuth: device.httpAuth ? { ...device.httpAuth } : undefined,
+    pcConfig: device.pcConfig ? { ...device.pcConfig } : undefined
   };
   
   // Remove undefined properties

@@ -59,36 +59,55 @@ class PCController {
         const retryText = retryCount > 0 ? ` (第${retryCount}次重试)` : '';
         console.log(`[${this.device.ip}] 发送WOL魔术包到 ${macAddress}${retryText}...`);
         
+        // 使用标志避免重复关闭socket
+        let isCompleted = false;
+        
+        // 设置超时处理器
+        const timeout = setTimeout(() => {
+          if (!isCompleted) {
+            isCompleted = true;
+            try {
+              client.close();
+            } catch (e) {
+              // 忽略关闭错误
+            }
+            reject(new Error('WOL发送超时'));
+          }
+        }, 5000);
+
         client.bind(() => {
           client.setBroadcast(true);
           
           client.send(magicPacket, 0, magicPacket.length, port, broadcastAddress, (err) => {
-            client.close();
-            
-            if (err) {
-              console.log(`[${this.device.ip}] WOL发送失败: ${err.message}`);
-              reject(err);
-            } else {
-              console.log(`[${this.device.ip}] WOL魔术包发送成功 -> ${broadcastAddress}:${port}`);
-              resolve({
-                success: true,
-                message: `WOL魔术包已发送到 ${macAddress}`,
-                details: {
-                  macAddress: macAddress,
-                  broadcastAddress: broadcastAddress,
-                  port: port,
-                  packetSize: magicPacket.length
-                }
-              });
+            if (!isCompleted) {
+              isCompleted = true;
+              clearTimeout(timeout);
+              
+              try {
+                client.close();
+              } catch (e) {
+                // 忽略关闭错误
+              }
+              
+              if (err) {
+                console.log(`[${this.device.ip}] WOL发送失败: ${err.message}`);
+                reject(err);
+              } else {
+                console.log(`[${this.device.ip}] WOL魔术包发送成功 -> ${broadcastAddress}:${port}`);
+                resolve({
+                  success: true,
+                  message: `WOL魔术包已发送到 ${macAddress}`,
+                  details: {
+                    macAddress: macAddress,
+                    broadcastAddress: broadcastAddress,
+                    port: port,
+                    packetSize: magicPacket.length
+                  }
+                });
+              }
             }
           });
         });
-
-        // 设置超时
-        setTimeout(() => {
-          client.close();
-          reject(new Error('WOL发送超时'));
-        }, 5000);
 
       } catch (error) {
         reject(error);
@@ -401,10 +420,9 @@ class PCController {
 
   async getStatus(retryCount = 0) {
     try {
-      const config = this.device.pcConfig || {};
       const result = await this.checkStatus(
         this.device.ip,
-        config.checkPort || null,
+        null, // 使用ping检测而不是端口检测
         retryCount
       );
 
