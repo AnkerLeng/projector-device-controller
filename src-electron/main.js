@@ -1531,6 +1531,26 @@ ipcMain.handle('restart-and-install-update', () => {
   }
 });
 
+// Single instance lock
+const gotTheLock = app.requestSingleInstanceLock();
+
+if (!gotTheLock) {
+  console.log('Application is already running, quitting...');
+  app.quit();
+} else {
+  // Handle second instance
+  app.on('second-instance', (event, commandLine, workingDirectory) => {
+    console.log('Second instance detected, focusing existing window...');
+    // Someone tried to run a second instance, we should focus our window
+    if (mainWindow) {
+      if (mainWindow.isMinimized()) {
+        mainWindow.restore();
+      }
+      mainWindow.focus();
+    }
+  });
+}
+
 // Electron app setup
 let mainWindow;
 
