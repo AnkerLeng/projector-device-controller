@@ -9,14 +9,16 @@ contextBridge.exposeInMainWorld('electronAPI', {
   // Device control
   deviceControl: (deviceId, action) => 
     ipcRenderer.invoke('device-power-control', deviceId, action),
+  testDeviceConfig: (deviceConfig, action = 'status') =>
+    ipcRenderer.invoke('test-device-config', deviceConfig, action),
   
   // Batch operations
   batchDeviceControl: (deviceIds, action) =>
     ipcRenderer.invoke('batch-device-control', deviceIds, action),
   
   // Batch operations with progress
-  batchDeviceControlWithProgress: (deviceIds, action) =>
-    ipcRenderer.invoke('batch-device-control-with-progress', deviceIds, action),
+  batchDeviceControlWithProgress: (deviceIds, action, operationId) =>
+    ipcRenderer.invoke('batch-device-control-with-progress', deviceIds, action, operationId),
   
   // Cancel batch operation
   cancelBatchOperation: (operationId) =>
@@ -47,10 +49,26 @@ contextBridge.exposeInMainWorld('electronAPI', {
   restartAndInstallUpdate: () => ipcRenderer.invoke('restart-and-install-update'),
   
   // 监听更新事件
-  onUpdateDownloaded: (callback) => ipcRenderer.on('update-downloaded', callback),
-  onUpdateAvailable: (callback) => ipcRenderer.on('update-available', callback),
-  onUpdateNotAvailable: (callback) => ipcRenderer.on('update-not-available', callback),
+  onUpdateDownloaded: (callback) => {
+    const listener = (_event, info) => callback(info);
+    ipcRenderer.on('update-downloaded', listener);
+    return () => ipcRenderer.removeListener('update-downloaded', listener);
+  },
+  onUpdateAvailable: (callback) => {
+    const listener = (_event, info) => callback(info);
+    ipcRenderer.on('update-available', listener);
+    return () => ipcRenderer.removeListener('update-available', listener);
+  },
+  onUpdateNotAvailable: (callback) => {
+    const listener = (_event, info) => callback(info);
+    ipcRenderer.on('update-not-available', listener);
+    return () => ipcRenderer.removeListener('update-not-available', listener);
+  },
   
   // 监听批量操作进度事件
-  onBatchProgress: (callback) => ipcRenderer.on('batch-progress', callback)
+  onBatchProgress: (callback) => {
+    const listener = (_event, data) => callback(data);
+    ipcRenderer.on('batch-progress', listener);
+    return () => ipcRenderer.removeListener('batch-progress', listener);
+  }
 });

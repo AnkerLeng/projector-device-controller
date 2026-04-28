@@ -1,19 +1,88 @@
 import { createApp } from 'vue';
 import App from './App.vue';
-import Antd from 'ant-design-vue';
+import {
+  Alert,
+  App as AntApp,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Collapse,
+  CollapsePanel,
+  Divider,
+  Dropdown,
+  Empty,
+  FloatButton,
+  Form,
+  FormItem,
+  Input,
+  InputNumber,
+  InputPassword,
+  Layout,
+  LayoutContent,
+  LayoutHeader,
+  LayoutSider,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Modal,
+  Popconfirm,
+  Progress,
+  Row,
+  Select,
+  SelectOption,
+  Space,
+  Spin,
+  Switch,
+  Tag,
+  Textarea,
+  Tour
+} from 'ant-design-vue';
 import 'ant-design-vue/dist/reset.css';
-
-// Import icons
-import * as Icons from '@ant-design/icons-vue';
 
 const app = createApp(App);
 
-// Use Ant Design Vue
-app.use(Antd);
-
-// Register icons globally
-Object.keys(Icons).forEach(key => {
-  app.component(key, Icons[key]);
+[
+  Alert,
+  AntApp,
+  Badge,
+  Button,
+  Card,
+  Checkbox,
+  Col,
+  Collapse,
+  CollapsePanel,
+  Divider,
+  Dropdown,
+  Empty,
+  FloatButton,
+  Form,
+  FormItem,
+  Input,
+  InputNumber,
+  InputPassword,
+  Layout,
+  LayoutContent,
+  LayoutHeader,
+  LayoutSider,
+  Menu,
+  MenuDivider,
+  MenuItem,
+  Modal,
+  Popconfirm,
+  Progress,
+  Row,
+  Select,
+  SelectOption,
+  Space,
+  Spin,
+  Switch,
+  Tag,
+  Textarea,
+  Tour
+].forEach(component => {
+  app.use(component);
 });
 
 app.mount('#app');

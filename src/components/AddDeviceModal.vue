@@ -458,24 +458,21 @@ const applyHttpPreset = (preset) => {
 
 const testConnection = async () => {
   try {
-    if (!window.electronAPI || !window.electronAPI.deviceControl) {
+    if (!window.electronAPI || !window.electronAPI.testDeviceConfig) {
       throw new Error('electronAPI 未初始化');
     }
     
     testLoading.value = true;
     testResult.value = null;
     
-    // Create a test device object
-    const testDevice = { ...formData };
+    // Create a plain test device object so IPC does not receive Vue proxies.
+    const testDevice = JSON.parse(JSON.stringify(formData));
     if (!testDevice.port) {
       testDevice.port = testDevice.type === 'tcp' ? 9763 : 80;
     }
     
     // Test with status command
-    const result = await window.electronAPI.deviceControl(
-      'test-' + Date.now(), 
-      'status'
-    );
+    const result = await window.electronAPI.testDeviceConfig(testDevice, 'status');
     
     if (result.success) {
       testResult.value = {

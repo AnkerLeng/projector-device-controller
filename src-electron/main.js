@@ -158,18 +158,33 @@ class TCPDeviceController {
 
       return new Promise((resolve, reject) => {
         const commandBuffer = Buffer.isBuffer(command) ? command : Buffer.from(command, 'utf8');
+        const commandText = Buffer.isBuffer(command) ? command.toString('hex') : command.trim();
         // Log command send in projector_control.js format
         const retryText = retryCount > 0 ? ` (第${retryCount}次重试)` : '';
-        console.log(`[${this.device.ip}] 发送指令 ${command.trim()}${retryText}...`);
+        console.log(`[${this.device.ip}] 发送指令 ${commandText}${retryText}...`);
         
-        this.socket.write(commandBuffer);
+        let completed = false;
+        let timeoutId;
+
+        const cleanup = () => {
+          clearTimeout(timeoutId);
+          this.socket.off('data', onData);
+          this.socket.off('error', onError);
+        };
+
+        const finish = (callback, value) => {
+          if (completed) return;
+          completed = true;
+          cleanup();
+          callback(value);
+        };
         
-        this.socket.once('data', (data) => {
+        const onData = (data) => {
           const response = data.toString().trim();
           console.log(`[${this.device.ip}] 收到响应: ${response}`);
           
           // Validate response matches command (like projector_control.js)
-          if (response === command.trim()) {
+          if (response === commandText) {
             console.log(`[${this.device.ip}] 指令执行成功`);
           } else if (response.includes('OK') || response.includes('SUCCESS')) {
             console.log(`[${this.device.ip}] 指令执行成功 (收到确认响应)`);
@@ -177,13 +192,29 @@ class TCPDeviceController {
             console.log(`[${this.device.ip}] 响应不匹配，但已收到响应`);
           }
           
-          resolve(response);
-        });
+          finish(resolve, response);
+        };
 
-        setTimeout(() => {
+        const onError = (error) => {
+          this.isConnected = false;
+          console.log(`[${this.device.ip}] 命令执行错误: ${error.message}`);
+          finish(reject, new Error(error.message));
+        };
+
+        this.socket.once('data', onData);
+        this.socket.once('error', onError);
+
+        timeoutId = setTimeout(() => {
           console.log(`[${this.device.ip}] 命令执行超时`);
-          reject(new Error('命令执行超时'));
+          this.socket.destroy();
+          finish(reject, new Error('命令执行超时'));
         }, 13000);
+
+        this.socket.write(commandBuffer, (error) => {
+          if (error) {
+            onError(error);
+          }
+        });
       });
     } catch (error) {
       console.log(`[${this.device.ip}] 发送指令失败: ${error.message}`);
@@ -544,6 +575,69 @@ function getDeviceById(deviceId) {
   return devices.find(d => d.id === deviceId);
 }
 
+function createControllerForDevice(device) {
+  if (device.type === 'tcp') {
+    return new TCPDeviceController(device);
+  }
+  if (device.type === 'http') {
+    return new HTTPDeviceController(device);
+  }
+  if (device.type === 'pc') {
+    return new PCController(device);
+  }
+  throw new Error(`Unsupported device type: ${device.type}`);
+}
+
+async function executeDeviceAction(controller, action) {
+  switch (action) {
+    case 'powerOn':
+      return await controller.powerOn();
+    case 'powerOff':
+      return await controller.powerOff();
+    case 'status':
+      return await controller.getStatus();
+    default:
+      throw new Error('Invalid action');
+  }
+}
+
+function createSafeIpcResult(result = {}) {
+  const hasNumericStatus = result.status !== undefined &&
+    result.status !== null &&
+    result.status !== '' &&
+    !Number.isNaN(Number(result.status));
+
+  const safeResult = {
+    success: Boolean(result.success),
+    error: result.error ? String(result.error) : null,
+    response: null,
+    status: hasNumericStatus ? Number(result.status) : null,
+    deviceStatus: typeof result.status === 'string' && !hasNumericStatus ? result.status : null,
+    responseTime: result.responseTime !== undefined && result.responseTime !== null ? Number(result.responseTime) : null
+  };
+
+  if (result.response !== undefined && result.response !== null) {
+    try {
+      if (typeof result.response === 'string') {
+        safeResult.response = result.response;
+      } else if (typeof result.response === 'object') {
+        safeResult.response = JSON.parse(JSON.stringify(result.response));
+      } else {
+        safeResult.response = String(result.response);
+      }
+    } catch (serializeError) {
+      console.warn('Failed to serialize device response:', serializeError);
+      safeResult.response = '[Response not serializable]';
+    }
+  }
+
+  if (result.statusText) {
+    safeResult.statusText = String(result.statusText);
+  }
+
+  return safeResult;
+}
+
 // 批量操作取消状态管理
 let batchOperationCancelled = false;
 let currentBatchOperationId = null;
@@ -619,79 +713,70 @@ ipcMain.handle('delete-device', async (event, deviceId) => {
 });
 
 ipcMain.handle('device-power-control', async (event, deviceId, action) => {
+  let controller;
+  let device;
   try {
-    const device = getDeviceById(deviceId);
+    device = getDeviceById(deviceId);
     if (!device) {
       return { success: false, error: 'Device not found' };
     }
 
-    let controller;
-    
-    if (device.type === 'tcp') {
-      controller = new TCPDeviceController(device);
-    } else if (device.type === 'http') {
-      controller = new HTTPDeviceController(device);
-    } else if (device.type === 'pc') {
-      controller = new PCController(device);
-    } else {
-      throw new Error(`Unsupported device type: ${device.type}`);
-    }
-    
-    let result;
-    switch (action) {
-      case 'powerOn':
-        result = await controller.powerOn();
-        break;
-      case 'powerOff':
-        result = await controller.powerOff();
-        break;
-      case 'status':
-        result = await controller.getStatus();
-        break;
-      default:
-        throw new Error('Invalid action');
-    }
-    
-    // Cleanup for TCP connections
-    if (device.type === 'tcp' && controller.disconnect) {
-      controller.disconnect();
-    }
-    
-    // 确保返回可序列化的数据
-    const safeResult = {
-      success: Boolean(result.success),
-      error: result.error ? String(result.error) : null,
-      response: null,
-      status: result.status ? Number(result.status) : null,
-      responseTime: result.responseTime ? Number(result.responseTime) : null
-    };
-
-    // 安全处理response字段
-    if (result.response) {
-      try {
-        if (typeof result.response === 'string') {
-          safeResult.response = result.response;
-        } else if (typeof result.response === 'object') {
-          safeResult.response = JSON.parse(JSON.stringify(result.response));
-        } else {
-          safeResult.response = String(result.response);
-        }
-      } catch (serializeError) {
-        console.warn(`Failed to serialize response for device ${device.name}:`, serializeError);
-        safeResult.response = '[Response not serializable]';
-      }
-    }
-
-    return safeResult;
+    controller = createControllerForDevice(device);
+    const result = await executeDeviceAction(controller, action);
+    return createSafeIpcResult(result);
   } catch (error) {
     console.error('Device control error:', error);
-    return { 
-      success: false, 
+    return {
+      success: false,
       error: String(error.message),
       response: null,
       status: null,
       responseTime: null
     };
+  } finally {
+    if (controller && controller.disconnect) {
+      controller.disconnect();
+    }
+  }
+});
+
+ipcMain.handle('test-device-config', async (event, deviceConfig, action = 'status') => {
+  let controller;
+  try {
+    if (!deviceConfig || typeof deviceConfig !== 'object') {
+      throw new Error('Invalid device config');
+    }
+
+    const testDevice = {
+      ...deviceConfig,
+      id: deviceConfig.id || `test-${Date.now()}`,
+      name: deviceConfig.name || '测试设备'
+    };
+
+    if (!testDevice.type) {
+      throw new Error('Device type is required');
+    }
+
+    if (testDevice.type !== 'pc' && !testDevice.port) {
+      testDevice.port = testDevice.type === 'tcp' ? 9763 : 80;
+    }
+
+    controller = createControllerForDevice(testDevice);
+    const result = await executeDeviceAction(controller, action);
+    return createSafeIpcResult(result);
+  } catch (error) {
+    console.error('Device config test error:', error);
+    return {
+      success: false,
+      error: String(error.message),
+      response: null,
+      status: null,
+      responseTime: null
+    };
+  } finally {
+    if (controller && controller.disconnect) {
+      controller.disconnect();
+    }
   }
 });
 
@@ -818,22 +903,28 @@ ipcMain.handle('batch-device-control', async (event, deviceIds, action) => {
             result = { success: false, error: 'Invalid action', attempts: 0 };
         }
       }
-      
+
       // Cleanup for TCP connections (PC devices don't need disconnect)
       if (device.type === 'tcp' && controller.disconnect) {
         controller.disconnect();
       }
       
       // 创建一个完全可序列化的对象，避免任何克隆错误
+      const hasNumericStatus = result.status !== undefined &&
+        result.status !== null &&
+        result.status !== '' &&
+        !Number.isNaN(Number(result.status));
       const safeResult = {
         deviceId: String(deviceId),
         deviceName: String(device.name || 'Unknown'),
         success: Boolean(result.success),
         error: result.error ? String(result.error) : null,
         response: null,
-        status: result.status ? Number(result.status) : null,
-        responseTime: result.responseTime ? Number(result.responseTime) : null,
-        attempts: result.attempts ? Number(result.attempts) : 0
+        status: hasNumericStatus ? Number(result.status) : null,
+        deviceStatus: typeof result.status === 'string' && !hasNumericStatus ? result.status : null,
+        responseTime: result.responseTime !== undefined && result.responseTime !== null ? Number(result.responseTime) : null,
+        attempts: result.attempts ? Number(result.attempts) : 0,
+        cancelled: Boolean(result.cancelled)
       };
 
       // 安全处理response字段，确保可序列化
@@ -941,11 +1032,12 @@ ipcMain.handle('batch-device-control', async (event, deviceIds, action) => {
 });
 
 // 带进度回调的批量设备控制处理器
-ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, action) => {
+ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, action, requestedOperationId) => {
   // 生成操作ID并重置取消状态
-  const operationId = `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+  const operationId = requestedOperationId ? String(requestedOperationId) : `batch-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
   currentBatchOperationId = operationId;
   batchOperationCancelled = false;
+  const isCurrentOperationCancelled = () => batchOperationCancelled && currentBatchOperationId === operationId;
   
   console.log(`开始带进度的批量${action}操作 [${operationId}]，共${deviceIds.length}个设备...`);
   
@@ -987,7 +1079,7 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
   // 逐个处理设备以便发送进度更新
   for (let index = 0; index < cleanDeviceIds.length; index++) {
     // 检查是否已取消操作
-    if (batchOperationCancelled) {
+    if (isCurrentOperationCancelled()) {
       console.log(`批量操作已取消，停止处理剩余设备 (${cleanDeviceIds.length - index} 个)`);
       
       // 将剩余设备标记为已取消
@@ -997,7 +1089,7 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
         
         event.sender.send('batch-progress', {
           deviceId: String(cancelledDeviceId),
-          status: 'failed',
+          status: 'cancelled',
           message: '操作已取消',
           attempts: 0
         });
@@ -1022,6 +1114,10 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
       // 设备之间添加小间隔，避免网络拥塞
       if (index > 0) {
         await new Promise(resolve => setTimeout(resolve, retryConfig.deviceDelay));
+        if (isCurrentOperationCancelled()) {
+          index--;
+          continue;
+        }
       }
 
       const device = getDeviceById(deviceId);
@@ -1040,6 +1136,27 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
           deviceId: String(deviceId),
           status: 'failed',
           message: 'Device not found',
+          attempts: 0
+        });
+        continue;
+      }
+
+      // 发送开始执行状态
+      if (isCurrentOperationCancelled()) {
+        results.push({
+          deviceId: String(deviceId),
+          deviceName: String(device.name || 'Unknown'),
+          success: false,
+          error: '操作已取消',
+          response: null,
+          status: null,
+          responseTime: null,
+          attempts: 0
+        });
+        event.sender.send('batch-progress', {
+          deviceId: String(deviceId),
+          status: 'cancelled',
+          message: '操作已取消',
           attempts: 0
         });
         continue;
@@ -1096,7 +1213,8 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
                 attempts: attempt
               });
             }
-          }
+          },
+          isCurrentOperationCancelled
         );
       } else {
         // 对于状态查询，使用普通方法（不需要重试太多次）
@@ -1113,7 +1231,8 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
                     attempts: attempt
                   });
                 }
-              }
+              },
+              isCurrentOperationCancelled
             );
             break;
           default:
@@ -1121,21 +1240,31 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
         }
       }
       
+      if (result.cancelled) {
+        batchOperationCancelled = true;
+      }
+
       // Cleanup for TCP connections (PC devices don't need disconnect)
       if (device.type === 'tcp' && controller.disconnect) {
         controller.disconnect();
       }
       
       // 创建一个完全可序列化的对象
+      const hasNumericStatus = result.status !== undefined &&
+        result.status !== null &&
+        result.status !== '' &&
+        !Number.isNaN(Number(result.status));
       const safeResult = {
         deviceId: String(deviceId),
         deviceName: String(device.name || 'Unknown'),
         success: Boolean(result.success),
         error: result.error ? String(result.error) : null,
         response: null,
-        status: result.status ? Number(result.status) : null,
-        responseTime: result.responseTime ? Number(result.responseTime) : null,
-        attempts: result.attempts ? Number(result.attempts) : 0
+        status: hasNumericStatus ? Number(result.status) : null,
+        deviceStatus: typeof result.status === 'string' && !hasNumericStatus ? result.status : null,
+        responseTime: result.responseTime !== undefined && result.responseTime !== null ? Number(result.responseTime) : null,
+        attempts: result.attempts ? Number(result.attempts) : 0,
+        cancelled: Boolean(result.cancelled)
       };
 
       // 安全处理response字段
@@ -1161,7 +1290,7 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
       // 发送完成状态
       event.sender.send('batch-progress', {
         deviceId: String(deviceId),
-        status: safeResult.success ? 'success' : 'failed',
+        status: safeResult.cancelled ? 'cancelled' : safeResult.success ? 'success' : 'failed',
         message: safeResult.success ? '执行成功' : safeResult.error,
         attempts: safeResult.attempts
       });
@@ -1274,14 +1403,31 @@ ipcMain.handle('batch-device-control-with-progress', async (event, deviceIds, ac
 });
 
 // 执行设备操作并发送进度回调的辅助函数
-async function executeWithProgressCallback(controller, action, config, progressCallback) {
+async function executeWithProgressCallback(controller, action, config, progressCallback, shouldCancel = () => false) {
   let lastError = null;
   
   for (let attempt = 1; attempt <= config.maxRetries; attempt++) {
+    if (shouldCancel()) {
+      return {
+        success: false,
+        error: '操作已取消',
+        attempts: attempt - 1,
+        cancelled: true
+      };
+    }
+
     try {
       if (attempt > 1) {
         progressCallback(attempt, '重试中...');
         await new Promise(resolve => setTimeout(resolve, config.retryDelay));
+        if (shouldCancel()) {
+          return {
+            success: false,
+            error: '操作已取消',
+            attempts: attempt - 1,
+            cancelled: true
+          };
+        }
       }
       
       let result;
@@ -1630,9 +1776,9 @@ app.whenReady().then(async () => {
 
 // Handle app errors
 app.on('web-contents-created', (event, contents) => {
-  contents.on('new-window', (event, navigationUrl) => {
+  contents.setWindowOpenHandler(() => {
     // Prevent new windows from being created
-    event.preventDefault();
+    return { action: 'deny' };
   });
 });
 

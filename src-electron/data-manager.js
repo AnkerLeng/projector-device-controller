@@ -187,6 +187,12 @@ class DataManager {
       console.log('DataManager: IP地址格式无效:', device.ip);
       throw new Error('Invalid IP address format');
     }
+
+    const ipParts = device.ip.split('.').map(Number);
+    if (ipParts.some(part => part < 0 || part > 255)) {
+      console.log('DataManager: IP地址范围无效:', device.ip);
+      throw new Error('Invalid IP address range');
+    }
     
     // 协议类型验证
     if (!['tcp', 'http', 'pc'].includes(device.type)) {

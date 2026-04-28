@@ -16,8 +16,24 @@ export default defineConfig({
     target: 'esnext', // 更新构建目标
     outDir: 'dist',
     assetsDir: 'assets',
+    chunkSizeWarningLimit: 700,
     rollupOptions: {
-      external: ['electron']
+      external: ['electron'],
+      output: {
+        manualChunks(id) {
+          if (!id.includes('node_modules')) return;
+
+          if (id.includes('ant-design-vue') || id.includes('@ant-design/icons-vue')) {
+            return 'ant-design';
+          }
+
+          if (id.includes('/vue/') || id.includes('@vue')) {
+            return 'vue';
+          }
+
+          return 'vendor';
+        }
+      }
     }
   },
   server: {

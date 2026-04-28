@@ -113,7 +113,7 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, onUnmounted } from 'vue';
 import { message } from 'ant-design-vue';
 import { 
   CloudDownloadOutlined,
@@ -126,6 +126,7 @@ const checking = ref(false);
 const currentVersion = ref('1.0.0');
 const updateDownloaded = ref(false);
 const updateInfo = ref(null);
+const unsubscribeUpdateListeners = [];
 
 const updateStatus = reactive({
   isDev: false,
@@ -205,23 +206,30 @@ onMounted(() => {
   loadUpdateStatus();
   
   // 监听更新事件
-  window.electronAPI.onUpdateAvailable((event, info) => {
+  unsubscribeUpdateListeners.push(window.electronAPI.onUpdateAvailable((info) => {
     console.log('Update available:', info);
     message.info(`发现新版本 v${info.version}，正在下载...`);
     showUpdateInfo.value = true;
-  });
+  }));
   
-  window.electronAPI.onUpdateNotAvailable((event, info) => {
+  unsubscribeUpdateListeners.push(window.electronAPI.onUpdateNotAvailable((info) => {
     console.log('No updates available:', info);
     message.info('当前版本已是最新版本');
-  });
+  }));
   
-  window.electronAPI.onUpdateDownloaded((event, info) => {
+  unsubscribeUpdateListeners.push(window.electronAPI.onUpdateDownloaded((info) => {
     updateDownloaded.value = true;
     updateInfo.value = info;
     message.success(`v${info.version} 下载完成，可以重启安装`, 0); // 持续显示
     showUpdateInfo.value = true; // 显示更新面板
-  });
+  }));
+});
+
+onUnmounted(() => {
+  while (unsubscribeUpdateListeners.length > 0) {
+    const unsubscribe = unsubscribeUpdateListeners.pop();
+    if (unsubscribe) unsubscribe();
+  }
 });
 </script>
 

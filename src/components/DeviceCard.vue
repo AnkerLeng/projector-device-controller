@@ -167,6 +167,7 @@ const getStatusColor = (status) => {
   switch (status) {
     case 'online': return 'green';
     case 'offline': return 'red';
+    case 'partial': return 'orange';
     case 'unknown': return 'default';
     default: return 'default';
   }
@@ -176,9 +177,15 @@ const getStatusText = (status) => {
   switch (status) {
     case 'online': return '在线';
     case 'offline': return '离线';
+    case 'partial': return '部分在线';
     case 'unknown': return '未知';
     default: return '未知';
   }
+};
+
+const inferDeviceStatus = (result) => {
+  if (!result?.success) return 'offline';
+  return result.deviceStatus || 'online';
 };
 
 const getTypeColor = (type) => {
@@ -209,8 +216,8 @@ const checkStatus = async () => {
     const result = await window.electronAPI.deviceControl(props.device.id, 'status');
     
     if (result.success) {
-      props.device.status = 'online';
-      message.info(`${props.device.name} 状态: 在线`);
+      props.device.status = inferDeviceStatus(result);
+      message.info(`${props.device.name} 状态: ${getStatusText(props.device.status)}`);
     } else {
       props.device.status = 'offline';
       message.warning(`${props.device.name} 状态: 离线`);
@@ -253,7 +260,7 @@ const testConnection = async () => {
         
         if (result.success) {
           message.success(`连接测试成功: ${props.device.name} (${responseTime}ms, 尝试 ${attempts}/${maxAttempts})`);
-          props.device.status = 'online';
+          props.device.status = inferDeviceStatus(result);
           
           // Enhanced success feedback with response details
           if (result.response) {

@@ -507,6 +507,11 @@ const monitoringIntervalTime = ref(30000); // 30 seconds default
 const showBatchProgressModal = ref(false);
 const batchProgressAction = ref('powerOn');
 const batchProgressModalRef = ref();
+let unsubscribeBatchProgress = null;
+
+const createBatchOperationId = () => {
+  return `batch-${Date.now()}-${Math.random().toString(36).slice(2, 11)}`;
+};
 
 // Tour steps configuration
 const tourSteps = computed(() => [
@@ -679,6 +684,15 @@ const formatTime = (timestamp) => {
   });
 };
 
+const inferDeviceStatus = (action, result) => {
+  if (!result?.success) return 'offline';
+  if (result.deviceStatus) return result.deviceStatus;
+  if (action === 'powerOn') return 'online';
+  if (action === 'powerOff') return 'offline';
+  if (action === 'status') return 'online';
+  return 'unknown';
+};
+
 const handleDevicePowerControl = async (deviceId, action) => {
   const device = devices.value.find(d => d.id === deviceId);
   if (!device) {
@@ -726,7 +740,7 @@ const handleDevicePowerControl = async (deviceId, action) => {
     
     if (result.success) {
       message.success(`${device.name} ${actionText}成功`);
-      device.status = action === 'powerOn' ? 'online' : 'offline';
+      device.status = inferDeviceStatus(action, result);
       addLog('success', `设备${actionText}成功`, { 
         deviceName: device.name, 
         response: result.response 
@@ -798,14 +812,11 @@ const batchPowerControl = async (action) => {
     
     // 确保传递的是纯净的数组，移除Vue响应式代理
     const cleanDeviceIds = [...selectedDevices.value].map(id => String(id));
+    const operationId = createBatchOperationId();
+    currentBatchOperationId.value = operationId;
     console.log('批量操作设备ID列表:', cleanDeviceIds);
     
-    const result = await window.electronAPI.batchDeviceControlWithProgress(cleanDeviceIds, action);
-    
-    // 保存操作ID用于取消功能
-    if (result.success && result.operationId) {
-      currentBatchOperationId.value = result.operationId;
-    }
+    const result = await window.electronAPI.batchDeviceControlWithProgress(cleanDeviceIds, action, operationId);
     
     // 通知进度对话框批量操作完成
     batchProgressModalRef.value?.completeBatchOperation();
@@ -828,7 +839,8 @@ const batchPowerControl = async (action) => {
         const device = devices.value.find(d => d.id === deviceId);
         if (device) {
           if (success) {
-            device.status = action === 'powerOn' ? 'online' : action === 'powerOff' ? 'offline' : 'online';
+            const resultItem = result.results.find(item => item.deviceId === deviceId);
+            device.status = inferDeviceStatus(action, resultItem);
           }
           // 为了调试，可以临时存储重试次数信息
           if (attempts > 1) {
@@ -845,7 +857,9 @@ const batchPowerControl = async (action) => {
   } finally {
     batchLoading.value = false;
     // 清除操作ID
-    currentBatchOperationId.value = null;
+    if (currentBatchOperationId.value) {
+      currentBatchOperationId.value = null;
+    }
   }
 };
 
@@ -893,7 +907,8 @@ const fallbackBatchControl = async (action) => {
         const device = devices.value.find(d => d.id === deviceId);
         if (device) {
           if (success) {
-            device.status = action === 'powerOn' ? 'online' : action === 'powerOff' ? 'offline' : 'online';
+            const resultItem = result.results.find(item => item.deviceId === deviceId);
+            device.status = inferDeviceStatus(action, resultItem);
           }
         }
       });
@@ -1065,7 +1080,7 @@ const refreshAllStatus = async () => {
       const result = await window.electronAPI.deviceControl(device.id, 'status');
       if (result.success) {
         // Simple status parsing - can be enhanced based on actual responses
-        device.status = 'online'; // Assume online if we get any response
+        device.status = inferDeviceStatus('status', result);
       } else {
         device.status = 'offline';
       }
@@ -1701,7 +1716,7 @@ const performMonitoringCheck = async () => {
             )
           ]);
           
-          const newStatus = result.success ? 'online' : 'offline';
+          const newStatus = inferDeviceStatus('status', result);
           device.status = newStatus;
           
           if (previousStatus && previousStatus !== newStatus) {
@@ -1827,7 +1842,7 @@ onMounted(async () => {
     
     // 监听批量操作进度事件
     if (window.electronAPI.onBatchProgress) {
-      window.electronAPI.onBatchProgress((event, data) => {
+      unsubscribeBatchProgress = window.electronAPI.onBatchProgress((data) => {
         // 更新进度对话框中的设备状态
         if (batchProgressModalRef.value) {
           batchProgressModalRef.value.updateProgress(
@@ -1882,6 +1897,11 @@ onUnmounted(() => {
   
   // Stop monitoring
   stopMonitoring();
+
+  if (unsubscribeBatchProgress) {
+    unsubscribeBatchProgress();
+    unsubscribeBatchProgress = null;
+  }
 });
 </script>
 

@@ -1,8 +1,8 @@
 const net = require('net');
 const dgram = require('dgram');
-const { exec } = require('child_process');
+const { execFile } = require('child_process');
 const { promisify } = require('util');
-const execAsync = promisify(exec);
+const execFileAsync = promisify(execFile);
 
 /**
  * PC电脑远程控制器
@@ -12,6 +12,38 @@ class PCController {
   constructor(device) {
     this.device = device;
     this.type = 'pc';
+  }
+
+  validateIpAddress(ip) {
+    const ipRegex = /^(\d{1,3}\.){3}\d{1,3}$/;
+    if (!ipRegex.test(ip)) {
+      throw new Error('Invalid IP address format');
+    }
+
+    const octets = ip.split('.').map(Number);
+    if (octets.some(part => part < 0 || part > 255)) {
+      throw new Error('Invalid IP address range');
+    }
+  }
+
+  validateUsername(username) {
+    if (!username || typeof username !== 'string') {
+      throw new Error('远程关机用户名未配置');
+    }
+
+    if (!/^[A-Za-z0-9._@\\-]+$/.test(username)) {
+      throw new Error('用户名包含不支持的字符');
+    }
+
+    if (username.startsWith('-')) {
+      throw new Error('用户名格式无效');
+    }
+  }
+
+  validatePassword(password) {
+    if (!password || typeof password !== 'string') {
+      throw new Error('远程关机密码或密钥路径未配置');
+    }
   }
 
   /**
@@ -125,14 +157,26 @@ class PCController {
    */
   async shutdownWindows(ip, username, password, timeout = 30, retryCount = 0) {
     try {
+      this.validateIpAddress(ip);
+      this.validateUsername(username);
+      this.validatePassword(password);
+
       // 使用wmic命令进行远程关机
-      const cmd = `wmic /node:"${ip}" /user:"${username}" /password:"${password}" process call create "shutdown /s /t ${timeout} /f"`;
+      const args = [
+        `/node:${ip}`,
+        `/user:${username}`,
+        `/password:${password}`,
+        'process',
+        'call',
+        'create',
+        `shutdown /s /t ${Number(timeout) || 30} /f`
+      ];
       
       // Enhanced logging with IP format and retry count
       const retryText = retryCount > 0 ? ` (第${retryCount}次重试)` : '';
       console.log(`[${ip}] 执行Windows WMI关机命令${retryText}...`);
       
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 10000 });
+      const { stdout, stderr } = await execFileAsync('wmic', args, { timeout: 10000, windowsHide: true });
       
       if (stderr && stderr.includes('ERROR')) {
         console.log(`[${ip}] WMI关机失败: ${stderr}`);
@@ -173,14 +217,36 @@ class PCController {
    */
   async shutdownLinux(ip, username, password, timeout = 1, retryCount = 0) {
     try {
+      this.validateIpAddress(ip);
+      this.validateUsername(username);
+      this.validatePassword(password);
+
       // 使用sshpass和ssh命令进行远程关机
-      let cmd;
+      let command;
+      let args;
       if (password.startsWith('/') || password.startsWith('~')) {
         // 私钥文件路径
-        cmd = `ssh -i "${password}" -o StrictHostKeyChecking=no ${username}@${ip} "sudo shutdown -h +${timeout}"`;
+        command = 'ssh';
+        args = [
+          '-i',
+          password,
+          '-o',
+          'StrictHostKeyChecking=no',
+          `${username}@${ip}`,
+          `sudo shutdown -h +${Number(timeout) || 1}`
+        ];
       } else {
         // 密码认证
-        cmd = `sshpass -p "${password}" ssh -o StrictHostKeyChecking=no ${username}@${ip} "sudo shutdown -h +${timeout}"`;
+        command = 'sshpass';
+        args = [
+          '-p',
+          password,
+          'ssh',
+          '-o',
+          'StrictHostKeyChecking=no',
+          `${username}@${ip}`,
+          `sudo shutdown -h +${Number(timeout) || 1}`
+        ];
       }
       
       // Enhanced logging with IP format and retry count
@@ -188,7 +254,7 @@ class PCController {
       const authMethod = password.startsWith('/') || password.startsWith('~') ? '密钥认证' : '密码认证';
       console.log(`[${ip}] 执行Linux SSH关机命令 (${authMethod})${retryText}...`);
       
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 10000 });
+      const { stdout, stderr } = await execFileAsync(command, args, { timeout: 10000 });
       
       console.log(`[${ip}] Linux关机命令执行成功 (${timeout}分钟后关机)`);
       return {
@@ -293,13 +359,14 @@ class PCController {
    */
   async pingHost(ip) {
     try {
+      this.validateIpAddress(ip);
       const isWindows = process.platform === 'win32';
-      const cmd = isWindows ? `ping -n 1 -w 3000 ${ip}` : `ping -c 1 -W 3 ${ip}`;
+      const args = isWindows ? ['-n', '1', '-w', '3000', ip] : ['-c', '1', '-W', '3', ip];
       
-      const { stdout, stderr } = await execAsync(cmd, { timeout: 5000 });
+      const { stdout, stderr } = await execFileAsync('ping', args, { timeout: 5000, windowsHide: true });
       
-      const success = isWindows ? 
-        stdout.includes('TTL=') : 
+      const success = isWindows ?
+        /TTL=/i.test(stdout) :
         stdout.includes('1 received');
         
       return {
